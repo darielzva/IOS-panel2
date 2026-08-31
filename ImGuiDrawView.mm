@@ -31,7 +31,6 @@
 #include "oxorany/oxorany_include.h"
 #import "Helper/Mem.h"
 #include "font.h"
-//import "Hosts/NSObject+URL.h"
 #import "Helper/Vector3.h"
 #import "Helper/Vector2.h"
 #import "Helper/Quaternion.h"
@@ -61,21 +60,14 @@ ImFont* pixel_smol = {};
 }
 
 static float fixLoginTimeout = 60.0f;
-
 static bool MenDeal = true;
-
 static char menuTitle[64] = "VN TOOL IPA VIP "; 
 
 @interface ImGuiDrawView () <MTKViewDelegate, UITextFieldDelegate>
-
 @property (nonatomic, strong) id <MTLDevice> device;
-
 @property (nonatomic, strong) id <MTLCommandQueue> commandQueue;
-
 @property (nonatomic, strong) UITextField *invisibleTextField;
-
 @property (nonatomic, readonly) MTKView *mtkView; 
-
 @end
 
 @implementation ImGuiDrawView
@@ -109,7 +101,6 @@ ImFont* Urbanist;
     Style.GrabRounding = 9.0f;     
     Style.TabRounding = 8.0f;       
     Style.ScrollbarRounding = 9.0f; 
-    
     Style.WindowBorderSize = 0.0f;  
     Style.FrameBorderSize = 1.0f;   
 
@@ -197,6 +188,7 @@ ImFont* Urbanist;
         ImGui::NewFrame();
 
         if (MenDeal) {
+            static int activeTab = 0;
             static float bgColor[4] = {0.06f, 0.06f, 0.08f, 0.94f};
             static float accentColor[4] = {0.00f, 0.45f, 0.90f, 1.00f};
 
@@ -212,15 +204,29 @@ ImFont* Urbanist;
             style.Colors[ImGuiCol_CheckMark] = ImVec4(accentColor[0], accentColor[1], accentColor[2], 1.0f);
             style.Colors[ImGuiCol_SliderGrab] = ImVec4(accentColor[0], accentColor[1], accentColor[2], 0.8f);
 
-            ImGui::SetNextWindowSize(ImVec2(520, 360), ImGuiCond_FirstUseEver); 
-            
-            ImGui::Begin(menuTitle, &MenDeal, ImGuiWindowFlags_NoCollapse);
+            ImGui::SetNextWindowSize(ImVec2(560, 360), ImGuiCond_FirstUseEver); 
+            ImGui::Begin(menuTitle, &MenDeal, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
 
-            if (ImGui::BeginTabBar("Tabs")) {
-                
-                // TAB INFO DEVELOPER
-                if (ImGui::BeginTabItem("Info Developer")) {
-                    ImGui::Spacing();
+            float menuWidth = ImGui::GetWindowWidth();
+            float menuHeight = ImGui::GetWindowHeight();
+
+            // --- PANEL LATERAL IZQUIERDO DE ICONOS ---
+            ImGui::BeginChild("Sidebar", ImVec2(75, menuHeight - 40), true);
+            {
+                if (ImGui::Selectable("ℹ️\nInfo", activeTab == 0, 0, ImVec2(60, 50))) { activeTab = 0; }
+                if (ImGui::Selectable("🎯\nESP", activeTab == 1, 0, ImVec2(60, 50))) { activeTab = 1; }
+                if (ImGui::Selectable("⚡\nAimBot", activeTab == 2, 0, ImVec2(60, 50))) { activeTab = 2; }
+                if (ImGui::Selectable("👕\nSkin", activeTab == 3, 0, ImVec2(60, 50))) { activeTab = 3; }
+                if (ImGui::Selectable("⚙️\nExtra", activeTab == 4, 0, ImVec2(60, 50))) { activeTab = 4; }
+            }
+            ImGui::EndChild();
+
+            ImGui::SameLine();
+
+            // --- PANEL DE CONTENIDO DERECHO ---
+            ImGui::BeginChild("Content", ImVec2(menuWidth - 100, menuHeight - 40), false);
+            {
+                if (activeTab == 0) {
                     ImGui::TextColored(ImVec4(0,1,1,1), "RENAME MENU");
                     if (ImGui::InputText("##rename", menuTitle, sizeof(menuTitle), ImGuiInputTextFlags_EnterReturnsTrue)) {
                         if (strlen(menuTitle) == 0) strcpy(menuTitle, " ");
@@ -241,14 +247,10 @@ ImFont* Urbanist;
 
                     ImGui::Separator();
                     ImGui::TextDisabled("@minhiosne");
-                    ImGui::EndTabItem();
                 }
-
-                // TAB ESP
-                if (ImGui::BeginTabItem("ESP")) {
-                    ImGui::Spacing();
+                else if (activeTab == 1) {
                     ImGui::Checkbox("Enable Cheats", &Vars.Enable);
-                    if (ImGui::BeginTable("split", 4)) {
+                    if (ImGui::BeginTable("split", 3)) {
                         ImGui::TableNextColumn(); ImGui::Checkbox("Line", &Vars.lines);
                         ImGui::TableNextColumn(); ImGui::Checkbox("Box", &Vars.Box);
                         ImGui::TableNextColumn(); ImGui::Checkbox("Health", &Vars.Health);
@@ -261,12 +263,8 @@ ImFont* Urbanist;
                         ImGui::TableNextColumn(); ImGui::Checkbox("Count", &Vars.enemycount);
                         ImGui::EndTable();
                     }
-                    ImGui::EndTabItem();
                 }
-
-                // TAB AIMBOT
-                if (ImGui::BeginTabItem("AimBot")) {
-                    ImGui::Spacing();
+                else if (activeTab == 2) {
                     ImGui::Checkbox("Enable Aimbot", &Vars.Aimbot);
                     ImGui::Checkbox("Visible", &Vars.VisibleCheck);
                     ImGui::Checkbox("Knocked", &Vars.IgnoreKnocked); 
@@ -285,61 +283,29 @@ ImFont* Urbanist;
                         ImGui::SliderFloat("Do nhay cao", &Vars.FlyUpForce, 0.0f, 30.0f, "%.1f");
                         ImGui::Unindent();
                     }
-
                     if (ImGui::Checkbox("Sieu Antiban VIP", &antiban_thanhprd)) {
-                        if (antiban_thanhprd) {
-                            ApplyAllBypassHooks();
-                        }
+                        if (antiban_thanhprd) { ApplyAllBypassHooks(); }
                     }                        
-                    
                     if (Vars.AimMode == 2) {
                         ImGui::SliderFloat("AimFov", &Vars.AimFov, 0.0f, 360.0f, "Fov %.0f");
                     }
-                    ImGui::EndTabItem();
                 }
-
-                // TAB MOD SKIN
-                if (ImGui::BeginTabItem("Mod Skin VIP")) {
-                    ImGui::Spacing();
+                else if (activeTab == 3) {
                     ImGui::TextColored(ImVec4(1, 0, 0, 1), "mod skin igg fifai");
                     ImGui::Separator();
-
-                    if (ImGui::Checkbox("cam co", &s_camco)) {
-                        modSkin(new JRMemoryEngine(mach_task_self()), s_camco, 909000001, 909000034);
-                    }
-                    if (ImGui::Checkbox("Mp40 Mang Xa ", &s_mp40_v7)) {
-                        modSkin(new JRMemoryEngine(mach_task_self()), s_mp40_v7, 909000001, 909000068);
-                    }
-                    if (ImGui::Checkbox("Mp40 Lv8 ", &s_mp40_v8)) {
-                        modSkin(new JRMemoryEngine(mach_task_self()), s_mp40_v8, 909000001, 909040010);
-                    }
-                    if (ImGui::Checkbox("M1014 (V1)", &s_m1014_v8_1)) {
-                        modSkin(new JRMemoryEngine(mach_task_self()), s_m1014_v8_1, 909000001, 909000085);
-                    }
-                    if (ImGui::Checkbox("M1014 (V2)", &s_m1014_v8_2)) {
-                        modSkin(new JRMemoryEngine(mach_task_self()), s_m1014_v8_2, 909000001, 909039011);
-                    }
-                    if (ImGui::Checkbox("Ump Lv7", &s_ump_v7)) {
-                        modSkin(new JRMemoryEngine(mach_task_self()), s_ump_v7, 909000001, 909000098);
-                    }
-                    if (ImGui::Checkbox("Ak Lv7", &s_ak_v7)) {
-                        modSkin(new JRMemoryEngine(mach_task_self()), s_ak_v7, 909000001, 909000063);
-                    }
-                    if (ImGui::Checkbox("An94 Lv7", &s_an94_v7)) {
-                        modSkin(new JRMemoryEngine(mach_task_self()), s_an94_v7, 909000001, 909035012);
-                    }
-                    if (ImGui::Checkbox("Thomson Lv7", &s_thomson_v7)) {
-                        modSkin(new JRMemoryEngine(mach_task_self()), s_thomson_v7, 909000001, 909038010);
-                    }
-
+                    if (ImGui::Checkbox("cam co", &s_camco)) { modSkin(new JRMemoryEngine(mach_task_self()), s_camco, 909000001, 909000034); }
+                    if (ImGui::Checkbox("Mp40 Mang Xa ", &s_mp40_v7)) { modSkin(new JRMemoryEngine(mach_task_self()), s_mp40_v7, 909000001, 909000068); }
+                    if (ImGui::Checkbox("Mp40 Lv8 ", &s_mp40_v8)) { modSkin(new JRMemoryEngine(mach_task_self()), s_mp40_v8, 909000001, 909040010); }
+                    if (ImGui::Checkbox("M1014 (V1)", &s_m1014_v8_1)) { modSkin(new JRMemoryEngine(mach_task_self()), s_m1014_v8_1, 909000001, 909000085); }
+                    if (ImGui::Checkbox("M1014 (V2)", &s_m1014_v8_2)) { modSkin(new JRMemoryEngine(mach_task_self()), s_m1014_v8_2, 909000001, 909039011); }
+                    if (ImGui::Checkbox("Ump Lv7", &s_ump_v7)) { modSkin(new JRMemoryEngine(mach_task_self()), s_ump_v7, 909000001, 909000098); }
+                    if (ImGui::Checkbox("Ak Lv7", &s_ak_v7)) { modSkin(new JRMemoryEngine(mach_task_self()), s_ak_v7, 909000001, 909000063); }
+                    if (ImGui::Checkbox("An94 Lv7", &s_an94_v7)) { modSkin(new JRMemoryEngine(mach_task_self()), s_an94_v7, 909000001, 909035012); }
+                    if (ImGui::Checkbox("Thomson Lv7", &s_thomson_v7)) { modSkin(new JRMemoryEngine(mach_task_self()), s_thomson_v7, 909000001, 909038010); }
                     ImGui::Separator();
                     if (ImGui::Button("RESET ALL SKIN")) { }
-                    ImGui::EndTabItem();
                 }
-
-                // TAB EXTRA
-                if (ImGui::BeginTabItem("Extra")) {
-                    ImGui::Spacing();
+                else if (activeTab == 4) {
                     ImGui::Checkbox("SilentAim", &SilentAim);
                     ImGui::Checkbox("CheckIsVisible", &CheckWall1);
                     ImGui::Checkbox("xoay xoay", &spin360); 
@@ -348,7 +314,6 @@ ImFont* Urbanist;
                         ImGui::SliderFloat("speed xoay", &SpinSpeed, 0.0f, 30000.0f, "%.0f");
                         ImGui::Unindent();
                     }                                     
-                    
                     ImGui::Checkbox("No Reload", &Vars.noreload);
                     ImGui::Checkbox("Infinite Ammo", &Vars.vohandan);
                     ImGui::Checkbox("UpPlayer", &Vars.UpPlayerOne);
@@ -359,18 +324,14 @@ ImFont* Urbanist;
                         FlyController *fly = [[FlyController alloc] init];
                         [fly flyAlturaSwitchChanged:fly_altura];
                     }       
-
                     if (ImGui::Checkbox("Sung nhanhh ", &fastShotEnabled)) {
                         setFastShot(new JRMemoryEngine(mach_task_self()), fastShotEnabled);
                     } 
-
                     ImGui::Checkbox("fly cao", &Vars.flyaltura);
-                    ImGui::Separator();
-                    ImGui::EndTabItem();
                 }
+            }
+            ImGui::EndChild();
 
-                ImGui::EndTabBar();
-            } 
             ImGui::End();
         }
 
