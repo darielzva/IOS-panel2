@@ -60,6 +60,8 @@ static BOOL isDarkMode = YES;
 static BOOL MenDeal = YES;
 static float menuAlpha = 1.0f;
 static float menuScale = 1.0f;
+static NSInteger currentAccentColorIndex = 0; // 0: Red, 1: Blue, 2: Green, 3: Pink
+static BOOL isMenuRounded = YES;
 
 @interface ImGuiDrawView : UIViewController
 + (void)showChange:(BOOL)open;
@@ -116,7 +118,13 @@ ImFont *_espFont;
 }
 
 - (UIColor *)accentColor {
-    return [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0];
+    switch (currentAccentColorIndex) {
+        case 0: return [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0]; // Red
+        case 1: return [UIColor colorWithRed:0.23 green:0.51 blue:0.96 alpha:1.0]; // Blue
+        case 2: return [UIColor colorWithRed:0.13 green:0.77 blue:0.36 alpha:1.0]; // Green
+        case 3: return [UIColor colorWithRed:0.92 green:0.28 blue:0.60 alpha:1.0]; // Pink
+        default: return [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0];
+    }
 }
 
 - (UIColor *)sidebarBackgroundColor {
@@ -238,7 +246,7 @@ ImFont *_espFont;
     self.floatingPanel = [[UIView alloc] initWithFrame:CGRectMake(40, 40, self.panelWidth, self.panelHeight)];
     self.floatingPanel.backgroundColor = [self backgroundColor];
     self.floatingPanel.clipsToBounds = YES;
-    self.floatingPanel.layer.cornerRadius = 14;
+    self.floatingPanel.layer.cornerRadius = isMenuRounded ? 14.0 : 0.0;
     self.floatingPanel.layer.masksToBounds = NO;
     self.floatingPanel.layer.borderWidth = 1.0;
     self.floatingPanel.layer.borderColor = [UIColor colorWithRed:0.25 green:0.12 blue:0.14 alpha:0.8].CGColor;
@@ -283,7 +291,7 @@ ImFont *_espFont;
 
         UIImageView *iv = [[UIImageView alloc] initWithFrame:CGRectMake((kSidebarWidth - 16 - 20)/2.0, (kTabItemHeight - 20)/2.0, 20, 20)];
         iv.image = [[UIImage systemImageNamed:icons[i]] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:15 weight:UIImageSymbolWeightMedium]];
-        iv.tintColor = (i == self.currentTab) ? [UIColor colorWithRed:0.95 green:0.25 blue:0.28 alpha:1.0] : [UIColor colorWithWhite:0.5 alpha:1.0];
+        iv.tintColor = (i == self.currentTab) ? [self accentColor] : [UIColor colorWithWhite:0.5 alpha:1.0];
         iv.contentMode = UIViewContentModeScaleAspectFit;
         iv.tag = 100;
         [btn addSubview:iv];
@@ -302,14 +310,14 @@ ImFont *_espFont;
 
     self.headerIconView = [[UIImageView alloc] initWithFrame:CGRectMake(12, (hdrH - 18)/2.0, 18, 18)];
     self.headerIconView.image = [[UIImage systemImageNamed:@"scope"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightBold]];
-    self.headerIconView.tintColor = [UIColor colorWithRed:0.95 green:0.25 blue:0.28 alpha:1.0];
+    self.headerIconView.tintColor = [self accentColor];
     self.headerIconView.contentMode = UIViewContentModeScaleAspectFit;
     [headerBar addSubview:self.headerIconView];
 
-    self.headerTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(36, 0, 150, hdrH)];
+    self.headerTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(36, 0, 180, hdrH)];
     self.headerTitleLabel.text = @"AIMBOT";
     self.headerTitleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightBold];
-    self.headerTitleLabel.textColor = [UIColor colorWithRed:0.95 green:0.25 blue:0.28 alpha:1.0];
+    self.headerTitleLabel.textColor = [self accentColor];
     [headerBar addSubview:self.headerTitleLabel];
 
     CGFloat btnSize = 26.0f;
@@ -329,7 +337,7 @@ ImFont *_espFont;
     self.themeButton.backgroundColor = [UIColor colorWithRed:0.16 green:0.16 blue:0.20 alpha:1.0];
     self.themeButton.layer.cornerRadius = btnSize / 2.0;
     [self.themeButton setImage:[[UIImage systemImageNamed:@"moon.fill"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightMedium]] forState:UIControlStateNormal];
-    self.themeButton.tintColor = [UIColor colorWithRed:0.95 green:0.25 blue:0.28 alpha:1.0];
+    self.themeButton.tintColor = [self accentColor];
     [self.themeButton addTarget:self action:@selector(toggleTheme) forControlEvents:UIControlEventTouchUpInside];
     [headerBar addSubview:self.themeButton];
 }
@@ -362,15 +370,17 @@ ImFont *_espFont;
     for (UIButton *btn in self.tabButtons) {
         UIImageView *iv = [btn viewWithTag:100];
         BOOL sel = (btn.tag == tab);
-        iv.tintColor = sel ? [UIColor colorWithRed:0.95 green:0.25 blue:0.28 alpha:1.0] : [UIColor colorWithWhite:0.5 alpha:1.0];
+        iv.tintColor = sel ? [self accentColor] : [UIColor colorWithWhite:0.5 alpha:1.0];
         btn.backgroundColor = [self sidebarButtonColor:sel];
     }
     
-    NSArray *titles = @[@"AIMBOT", @"ESP", @"WORLD", @"SETTINGS", @"PROFILE", @"EXTRA"];
+    NSArray *titles = @[@"AIMBOT", @"ESP", @"WORLD", @"SETTINGS", @"ACCOUNT", @"EXTRA"];
     NSArray *icons = @[@"scope", @"eye", @"cube", @"gearshape", @"person", @"square.and.arrow.down"];
     if (tab < titles.count) {
         self.headerTitleLabel.text = titles[tab];
         self.headerIconView.image = [[UIImage systemImageNamed:icons[tab]] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightBold]];
+        self.headerTitleLabel.textColor = [self accentColor];
+        self.headerIconView.tintColor = [self accentColor];
     }
 }
 
@@ -408,7 +418,7 @@ ImFont *_espFont;
 #pragma mark - Content Builders
 
 - (CGFloat)addAimbotContent:(CGFloat)y width:(CGFloat)w {
-    y = [self addNoticeBanner:@"Hack Do MinhiOS Phát Triển. Cảm Ơn Đã Sử Dụng Phiên Bản Này" atY:y width:w];
+    y = [self addNoticeBanner:@"Hack developed by VN Tool. Thanks for using this version." atY:y width:w];
     
     NSArray *options = @[@"Bật Aimbot", @"ab_silent", @"Không Aim Sau Tường", @"Kiểm Tra Địch", @"Bỏ qua địch gục"];
     
@@ -437,45 +447,96 @@ ImFont *_espFont;
 }
 
 - (CGFloat)addSettingsContent:(CGFloat)y width:(CGFloat)w {
-    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(12, y, w - 24, 24)];
-    title.text = @"Personalización del Panel";
-    title.font = [UIFont systemFontOfSize:12 weight:UIFontWeightBold];
-    title.textColor = [self textColor];
-    [self.contentContainer addSubview:title];
-    y += 28;
+    y = [self addNoticeBanner:@"Hack developed by VN Tool. Thanks for using this version." atY:y width:w];
+    
+    // Primary Color Section
+    UILabel *colorLbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y, w - 24, 20)];
+    colorLbl.text = @"PRIMARY COLOR";
+    colorLbl.font = [UIFont systemFontOfSize:10.5 weight:UIFontWeightBold];
+    colorLbl.textColor = [self secondaryTextColor];
+    [self.contentContainer addSubview:colorLbl];
+    y += 22;
 
-    NSArray *themes = @[@"Modo Oscuro / Claro", @"Color de Acentuación (Rojo/Azul)", @"Bordes Redondeados (Activos)"];
-    for (NSString *opt in themes) {
-        CGFloat rowH = 32;
-        [self addToggleItem:opt atFrame:CGRectMake(12, y, w - 24, rowH)];
-        y += rowH + 6;
+    NSArray *colors = @[@"Red", @"Blue", @"Green", @"Pink"];
+    CGFloat btnW = (w - 24 - 24) / 4.0;
+    for (int i = 0; i < colors.count; i++) {
+        UIButton *cBtn = [[UIButton alloc] initWithFrame:CGRectMake(12 + i * (btnW + 8), y, btnW, 28)];
+        cBtn.backgroundColor = (currentAccentColorIndex == i) ? [self accentColor] : [UIColor colorWithRed:0.16 green:0.16 blue:0.20 alpha:1.0];
+        cBtn.layer.cornerRadius = 6;
+        [cBtn setTitle:colors[i] forState:UIControlStateNormal];
+        [cBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        cBtn.titleLabel.font = [UIFont systemFontOfSize:11 weight:UIFontWeightBold];
+        cBtn.tag = i;
+        [cBtn addTarget:self action:@selector(changeColorTapped:) forControlEvents:UIControlEventTouchUpInside];
+        [self.contentContainer addSubview:cBtn];
     }
+    y += 36;
+
+    // Menu Style Section
+    UILabel *styleLbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y, w - 24, 20)];
+    styleLbl.text = @"MENU STYLE";
+    styleLbl.font = [UIFont systemFontOfSize:10.5 weight:UIFontWeightBold];
+    styleLbl.textColor = [self secondaryTextColor];
+    [self.contentContainer addSubview:styleLbl];
+    y += 22;
+
+    NSArray *styles = @[@"Rounded", @"Square"];
+    CGFloat sBtnW = (w - 24 - 8) / 2.0;
+    for (int i = 0; i < styles.count; i++) {
+        BOOL isSelected = (i == 0 && isMenuRounded) || (i == 1 && !isMenuRounded);
+        UIButton *sBtn = [[UIButton alloc] initWithFrame:CGRectMake(12 + i * (sBtnW + 8), y, sBtnW, 28)];
+        sBtn.backgroundColor = isSelected ? [self accentColor] : [UIColor colorWithRed:0.16 green:0.16 blue:0.20 alpha:1.0];
+        sBtn.layer.cornerRadius = 6;
+        [sBtn setTitle:styles[i] forState:UIControlStateNormal];
+        [sBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        sBtn.titleLabel.font = [UIFont systemFontOfSize:11 weight:UIFontWeightBold];
+        sBtn.tag = i;
+        [sBtn addTarget:self action:@selector(changeStyleTapped:) forControlEvents:UIControlEventTouchUpInside];
+        [self.contentContainer addSubview:sBtn];
+    }
+    y += 36;
+
+    // UI Customization Toggles
+    UILabel *uiLbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y, w - 24, 20)];
+    uiLbl.text = @"UI CUSTOMIZATION";
+    uiLbl.font = [UIFont systemFontOfSize:10.5 weight:UIFontWeightBold];
+    uiLbl.textColor = [self secondaryTextColor];
+    [self.contentContainer addSubview:uiLbl];
+    y += 22;
+
+    [self addToggleItem:@"Dark Mode" atFrame:CGRectMake(12, y, w - 24, 32)];
+    y += 38;
+    [self addToggleItem:@"Stream Mode" atFrame:CGRectMake(12, y, w - 24, 32)];
+    y += 38;
+
     return y;
 }
 
 - (CGFloat)addProfileContent:(CGFloat)y width:(CGFloat)w {
+    y = [self addNoticeBanner:@"Hack developed by VN Tool. Thanks for using this version." atY:y width:w];
+    
     NSArray *infoItems = @[
-        @"[+] Creador: Dariel Modz",
-        @"[+] Usuario: darielv7a",
-        @"[+] Versión del Juego: Latest v1.0",
-        @"[+] Estado: Licencia VIP Activa",
-        @"[+] Expiración: Ilimitada / Lifetime"
+        @"ACCOUNT",
+        @"Your current plan is Pro",
+        @"Hack developed by VNTOOL Owner @tanhdz1602 for game version 1.12.3.14.",
+        @"Other devs @user_ngkhanh @duck061201 @thanhprdcrack"
     ];
     
     for (NSString *info in infoItems) {
-        UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y, w - 24, 22)];
+        UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y, w - 24, 20)];
         lbl.text = info;
-        lbl.font = [UIFont systemFontOfSize:11.5 weight:UIFontWeightMedium];
-        lbl.textColor = [self textColor];
+        lbl.font = [UIFont systemFontOfSize:11 weight:([info isEqualToString:@"ACCOUNT"] ? UIFontWeightBold : UIFontWeightMedium)];
+        lbl.textColor = [info isEqualToString:@"ACCOUNT"] ? [self accentColor] : [self textColor];
+        lbl.numberOfLines = 0;
         [self.contentContainer addSubview:lbl];
-        y += 26;
+        y += 24;
     }
 
-    y += 10;
+    y += 8;
     UIButton *tgButton = [[UIButton alloc] initWithFrame:CGRectMake(12, y, w - 24, 36)];
-    tgButton.backgroundColor = [UIColor colorWithRed:0.14 green:0.53 blue:0.89 alpha:1.0];
+    tgButton.backgroundColor = [self accentColor];
     tgButton.layer.cornerRadius = 8;
-    [tgButton setTitle:@"Unirse al Grupo de Telegram" forState:UIControlStateNormal];
+    [tgButton setTitle:@"❤️ Feedback (Telegram)" forState:UIControlStateNormal];
     [tgButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     tgButton.titleLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightBold];
     [tgButton addTarget:self action:@selector(openTelegramGroup) forControlEvents:UIControlEventTouchUpInside];
@@ -517,11 +578,11 @@ ImFont *_espFont;
     container.layer.cornerRadius = 6;
     container.clipsToBounds = YES;
     
-    BOOL isOn = [self.checkboxStates[title] boolValue];
+    BOOL isOn = [title isEqualToString:@"Dark Mode"] ? isDarkMode : [self.checkboxStates[title] boolValue];
     
     CGFloat switchSize = 18.0f;
     UIButton *boxBtn = [[UIButton alloc] initWithFrame:CGRectMake(frame.size.width - switchSize - 10, (frame.size.height - switchSize)/2.0, switchSize, switchSize)];
-    boxBtn.backgroundColor = isOn ? [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0] : [UIColor colorWithRed:0.22 green:0.22 blue:0.26 alpha:0.5];
+    boxBtn.backgroundColor = isOn ? [self accentColor] : [UIColor colorWithRed:0.22 green:0.22 blue:0.26 alpha:0.5];
     boxBtn.layer.cornerRadius = 4.0;
     boxBtn.userInteractionEnabled = NO;
     
@@ -560,11 +621,16 @@ ImFont *_espFont;
     
     if (titleLbl) {
         NSString *key = titleLbl.text;
+        if ([key isEqualToString:@"Dark Mode"]) {
+            [self toggleTheme];
+            return;
+        }
+        
         BOOL current = [self.checkboxStates[key] boolValue];
         BOOL newState = !current;
         self.checkboxStates[key] = @(newState);
         
-        boxBtn.backgroundColor = newState ? [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0] : [UIColor colorWithRed:0.22 green:0.22 blue:0.26 alpha:0.5];
+        boxBtn.backgroundColor = newState ? [self accentColor] : [UIColor colorWithRed:0.22 green:0.22 blue:0.26 alpha:0.5];
         if (newState) {
             [boxBtn setImage:[[UIImage systemImageNamed:@"checkmark"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:9 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
             boxBtn.tintColor = [UIColor whiteColor];
@@ -576,17 +642,33 @@ ImFont *_espFont;
 
 #pragma mark - Actions
 
+- (void)changeColorTapped:(UIButton *)sender {
+    currentAccentColorIndex = sender.tag;
+    [self updateThemeUIElements];
+}
+
+- (void)changeStyleTapped:(UIButton *)sender {
+    isMenuRounded = (sender.tag == 0);
+    self.floatingPanel.layer.cornerRadius = isMenuRounded ? 14.0 : 0.0;
+    [self updateThemeUIElements];
+}
+
 - (void)animateClose {
     MenDeal = false;
 }
 
 - (void)toggleTheme {
     isDarkMode = !isDarkMode;
+    [self updateThemeUIElements];
+}
+
+- (void)updateThemeUIElements {
     self.floatingPanel.backgroundColor = [self backgroundColor];
     self.sidebarBg.backgroundColor = [self sidebarBackgroundColor];
     
     UIImage *themeIcon = isDarkMode ? [[UIImage systemImageNamed:@"moon.fill"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightMedium]] : [[UIImage systemImageNamed:@"sun.max.fill"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightMedium]];
     [self.themeButton setImage:themeIcon forState:UIControlStateNormal];
+    self.themeButton.tintColor = [self accentColor];
     
     [self updateSidebarForTab:self.currentTab];
     [self loadTabContent:self.currentTab];
