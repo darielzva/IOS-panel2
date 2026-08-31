@@ -1,4 +1,4 @@
-// Code By VanNghia (Complete, Fixed & Updated with Layout from Reference)
+// Code By VanNghia (Complete, Fixed & Updated with Settings & Profile Sections)
 #import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
 #import <Foundation/Foundation.h>
@@ -56,13 +56,11 @@ static const CGFloat kSidebarWidth     = 64;
 static const CGFloat kTabItemHeight    = 44;
 static const CGFloat kTabSpacing       = 6;
 
-// Declaración de variables globales del menú
 static BOOL isDarkMode = YES;
 static BOOL MenDeal = YES;
 static float menuAlpha = 1.0f;
 static float menuScale = 1.0f;
 
-// Declaración de la clase principal
 @interface ImGuiDrawView : UIViewController
 + (void)showChange:(BOOL)open;
 @end
@@ -106,15 +104,15 @@ ImFont *_espFont;
 #pragma mark - Theme & Colors
 
 - (UIColor *)backgroundColor {
-    return isDarkMode ? [UIColor colorWithRed:0.09 green:0.09 blue:0.11 alpha:0.95] : [UIColor colorWithRed:0.95 green:0.95 blue:0.95 alpha:0.95];
+    return isDarkMode ? [UIColor colorWithRed:0.09 green:0.09 blue:0.11 alpha:0.98] : [UIColor colorWithRed:0.96 green:0.96 blue:0.98 alpha:0.98];
 }
 
 - (UIColor *)textColor {
-    return isDarkMode ? [UIColor colorWithWhite:0.92 alpha:1.0] : [UIColor blackColor];
+    return isDarkMode ? [UIColor colorWithWhite:0.92 alpha:1.0] : [UIColor colorWithRed:0.15 green:0.15 blue:0.18 alpha:1.0];
 }
 
 - (UIColor *)secondaryTextColor {
-    return [UIColor colorWithWhite:0.6 alpha:1.0];
+    return isDarkMode ? [UIColor colorWithWhite:0.6 alpha:1.0] : [UIColor colorWithWhite:0.45 alpha:1.0];
 }
 
 - (UIColor *)accentColor {
@@ -122,7 +120,7 @@ ImFont *_espFont;
 }
 
 - (UIColor *)sidebarBackgroundColor {
-    return isDarkMode ? [UIColor colorWithRed:0.07 green:0.07 blue:0.09 alpha:1.0] : [UIColor colorWithRed:0.90 green:0.90 blue:0.92 alpha:1.0];
+    return isDarkMode ? [UIColor colorWithRed:0.07 green:0.07 blue:0.09 alpha:1.0] : [UIColor colorWithRed:0.90 green:0.90 blue:0.93 alpha:1.0];
 }
 
 - (UIColor *)sidebarButtonColor:(BOOL)selected {
@@ -131,6 +129,10 @@ ImFont *_espFont;
     } else {
         return selected ? [[self accentColor] colorWithAlphaComponent:0.15] : [UIColor clearColor];
     }
+}
+
+- (UIColor *)toggleBackgroundColor {
+    return isDarkMode ? [UIColor colorWithRed:0.14 green:0.14 blue:0.18 alpha:1.0] : [UIColor colorWithRed:1.0 green:1.0 blue:1.0 alpha:1.0];
 }
 
 #pragma mark - Setup & Lifecycle
@@ -376,7 +378,7 @@ ImFont *_espFont;
     for (UIView *v in self.contentContainer.subviews) [v removeFromSuperview];
     
     CGFloat w = self.contentScrollView.frame.size.width;
-    CGFloat y = 8;
+    CGFloat y = 4;
     
     switch (tab) {
         case MenuTabAimbot:
@@ -389,10 +391,10 @@ ImFont *_espFont;
             y = [self addPlaceholderContent:@"World & Visual Options" atY:y width:w];
             break;
         case MenuTabSettings:
-            y = [self addPlaceholderContent:@"Menu Settings & Configs" atY:y width:w];
+            y = [self addSettingsContent:y width:w];
             break;
         case MenuTabProfile:
-            y = [self addPlaceholderContent:@"Profile & License Info" atY:y width:w];
+            y = [self addProfileContent:y width:w];
             break;
         case MenuTabExtra:
             y = [self addPlaceholderContent:@"Extra Utilities & Tools" atY:y width:w];
@@ -414,7 +416,7 @@ ImFont *_espFont;
     CGFloat currentY = y;
     
     for (NSString *title in options) {
-        CGFloat rowH = 34;
+        CGFloat rowH = 32;
         [self addToggleItem:title atFrame:CGRectMake(12, currentY, itemW, rowH)];
         currentY += rowH + 6;
     }
@@ -427,45 +429,101 @@ ImFont *_espFont;
     CGFloat currentY = y;
     
     for (NSString *title in options) {
-        CGFloat rowH = 34;
+        CGFloat rowH = 32;
         [self addToggleItem:title atFrame:CGRectMake(12, currentY, itemW, rowH)];
         currentY += rowH + 6;
     }
     return currentY;
 }
 
-- (CGFloat)addNoticeBanner:(NSString *)text atY:(CGFloat)y width:(CGFloat)w {
-    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y, w - 24, 28)];
-    lbl.text = text;
-    lbl.font = [UIFont fontWithName:@"Helvetica" size:10] ?: [UIFont systemFontOfSize:10 weight:UIFontWeightMedium];
-    lbl.textColor = [UIColor colorWithWhite:0.7 alpha:1.0];
-    lbl.numberOfLines = 1;
-    [self.contentContainer addSubview:lbl];
-    return y + 32;
+- (CGFloat)addSettingsContent:(CGFloat)y width:(CGFloat)w {
+    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(12, y, w - 24, 24)];
+    title.text = @"Personalización del Panel";
+    title.font = [UIFont systemFontOfSize:12 weight:UIFontWeightBold];
+    title.textColor = [self textColor];
+    [self.contentContainer addSubview:title];
+    y += 28;
+
+    NSArray *themes = @[@"Modo Oscuro / Claro", @"Color de Acentuación (Rojo/Azul)", @"Bordes Redondeados (Activos)"];
+    for (NSString *opt in themes) {
+        CGFloat rowH = 32;
+        [self addToggleItem:opt atFrame:CGRectMake(12, y, w - 24, rowH)];
+        y += rowH + 6;
+    }
+    return y;
 }
 
+- (CGFloat)addProfileContent:(CGFloat)y width:(CGFloat)w {
+    NSArray *infoItems = @[
+        @"[+] Creador: Dariel Modz",
+        @"[+] Usuario: darielv7a",
+        @"[+] Versión del Juego: Latest v1.0",
+        @"[+] Estado: Licencia VIP Activa",
+        @"[+] Expiración: Ilimitada / Lifetime"
+    ];
+    
+    for (NSString *info in infoItems) {
+        UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y, w - 24, 22)];
+        lbl.text = info;
+        lbl.font = [UIFont systemFontOfSize:11.5 weight:UIFontWeightMedium];
+        lbl.textColor = [self textColor];
+        [self.contentContainer addSubview:lbl];
+        y += 26;
+    }
+
+    y += 10;
+    UIButton *tgButton = [[UIButton alloc] initWithFrame:CGRectMake(12, y, w - 24, 36)];
+    tgButton.backgroundColor = [UIColor colorWithRed:0.14 green:0.53 blue:0.89 alpha:1.0];
+    tgButton.layer.cornerRadius = 8;
+    [tgButton setTitle:@"Unirse al Grupo de Telegram" forState:UIControlStateNormal];
+    [tgButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    tgButton.titleLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightBold];
+    [tgButton addTarget:self action:@selector(openTelegramGroup) forControlEvents:UIControlEventTouchUpInside];
+    [self.contentContainer addSubview:tgButton];
+    
+    return y + 46;
+}
+
+- (void)openTelegramGroup {
+    NSURL *url = [NSURL URLWithString:@"https://t.me/s/darielv7a"];
+    if ([[UIApplication sharedApplication] canOpenURL:url]) {
+        [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
+    }
+}
+
+- (CGFloat)addNoticeBanner:(NSString *)text atY:(CGFloat)y width:(CGFloat)w {
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y, w - 24, 22)];
+    lbl.text = text;
+    lbl.font = [UIFont systemFontOfSize:10 weight:UIFontWeightMedium];
+    lbl.textColor = [self secondaryTextColor];
+    lbl.numberOfLines = 1;
+    [self.contentContainer addSubview:lbl];
+    return y + 26;
+}
 
 - (CGFloat)addPlaceholderContent:(NSString *)text atY:(CGFloat)y width:(CGFloat)w {
-    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y + 20, w - 24, 40)];
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y + 40, w - 24, 40)];
     lbl.text = text;
     lbl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
     lbl.textColor = [self secondaryTextColor];
     lbl.textAlignment = NSTextAlignmentCenter;
     [self.contentContainer addSubview:lbl];
-    return y + 70;
+    return y + 80;
 }
 
 - (void)addToggleItem:(NSString *)title atFrame:(CGRect)frame {
     UIView *container = [[UIView alloc] initWithFrame:frame];
-    container.backgroundColor = [UIColor colorWithRed:0.13 green:0.13 blue:0.16 alpha:1.0];
-    container.layer.cornerRadius = 8;
+    container.backgroundColor = [self toggleBackgroundColor];
+    container.layer.cornerRadius = 6;
+    container.clipsToBounds = YES;
     
     BOOL isOn = [self.checkboxStates[title] boolValue];
     
-    CGFloat switchSize = 20.0f;
-    UIButton *boxBtn = [[UIButton alloc] initWithFrame:CGRectMake(frame.size.width - switchSize - 12, (frame.size.height - switchSize)/2.0, switchSize, switchSize)];
-    boxBtn.backgroundColor = isOn ? [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0] : [UIColor colorWithRed:0.22 green:0.22 blue:0.26 alpha:1.0];
-    boxBtn.layer.cornerRadius = switchSize / 2.0;
+    CGFloat switchSize = 18.0f;
+    UIButton *boxBtn = [[UIButton alloc] initWithFrame:CGRectMake(frame.size.width - switchSize - 10, (frame.size.height - switchSize)/2.0, switchSize, switchSize)];
+    boxBtn.backgroundColor = isOn ? [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0] : [UIColor colorWithRed:0.22 g:0.22 b:0.26 alpha:0.5];
+    boxBtn.layer.cornerRadius = 4.0;
+    boxBtn.userInteractionEnabled = NO;
     
     if (isOn) {
         [boxBtn setImage:[[UIImage systemImageNamed:@"checkmark"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:9 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
@@ -474,9 +532,9 @@ ImFont *_espFont;
     
     boxBtn.tag = 999;
     
-    UILabel *titleLbl = [[UILabel alloc] initWithFrame:CGRectMake(12, 0, frame.size.width - 50, frame.size.height)];
+    UILabel *titleLbl = [[UILabel alloc] initWithFrame:CGRectMake(10, 0, frame.size.width - 45, frame.size.height)];
     titleLbl.text = title;
-    titleLbl.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
+    titleLbl.font = [UIFont systemFontOfSize:11.5 weight:UIFontWeightMedium];
     titleLbl.textColor = [self textColor];
     
     UIButton *hitBox = [[UIButton alloc] initWithFrame:container.bounds];
@@ -506,7 +564,7 @@ ImFont *_espFont;
         BOOL newState = !current;
         self.checkboxStates[key] = @(newState);
         
-        boxBtn.backgroundColor = newState ? [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0] : [UIColor colorWithRed:0.22 green:0.22 blue:0.26 alpha:1.0];
+        boxBtn.backgroundColor = newState ? [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0] : [UIColor colorWithRed:0.22 g:0.22 b:0.26 alpha:0.5];
         if (newState) {
             [boxBtn setImage:[[UIImage systemImageNamed:@"checkmark"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:9 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
             boxBtn.tintColor = [UIColor whiteColor];
@@ -526,6 +584,10 @@ ImFont *_espFont;
     isDarkMode = !isDarkMode;
     self.floatingPanel.backgroundColor = [self backgroundColor];
     self.sidebarBg.backgroundColor = [self sidebarBackgroundColor];
+    
+    UIImage *themeIcon = isDarkMode ? [[UIImage systemImageNamed:@"moon.fill"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightMedium]] : [[UIImage systemImageNamed:@"sun.max.fill"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightMedium]];
+    [self.themeButton setImage:themeIcon forState:UIControlStateNormal];
+    
     [self updateSidebarForTab:self.currentTab];
     [self loadTabContent:self.currentTab];
 }
