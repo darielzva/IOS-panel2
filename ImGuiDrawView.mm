@@ -65,7 +65,19 @@ typedef NS_ENUM(NSInteger, MenuTab) {
     MenuTabExtra
 };
 
+// Declaración de variables globales del menú
+static BOOL isDarkMode = YES;
+static BOOL MenDeal = YES;
+static float menuAlpha = 1.0f;
+static float menuScale = 1.0f;
+
+// Declaración de la clase principal
+@interface ImGuiDrawView : UIViewController
++ (void)showChange:(BOOL)open;
+@end
+
 @interface ImGuiDrawView () <MTKViewDelegate, UIGestureRecognizerDelegate>
+
 
 @property (nonatomic, strong) id <MTLDevice> device;
 @property (nonatomic, strong) id <MTLCommandQueue> commandQueue;
