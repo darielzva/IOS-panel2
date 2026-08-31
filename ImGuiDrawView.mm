@@ -1,4 +1,4 @@
-// Code By VanNghia (Complete & Fixed)
+// Code By VanNghia (Complete, Fixed & Updated with Layout from Reference)
 #import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
 #import <Foundation/Foundation.h>
@@ -52,9 +52,9 @@ ImFont* pixel_smol = {};
 #define kHeight [UIScreen mainScreen].bounds.size.height
 #define kScale  [UIScreen mainScreen].scale
 
-static const CGFloat kSidebarWidth     = 96;
-static const CGFloat kTabItemHeight    = 48;
-static const CGFloat kTabSpacing       = 4;
+static const CGFloat kSidebarWidth     = 64;
+static const CGFloat kTabItemHeight    = 44;
+static const CGFloat kTabSpacing       = 6;
 
 // Declaración de variables globales del menú
 static BOOL isDarkMode = YES;
@@ -68,10 +68,11 @@ static float menuScale = 1.0f;
 @end
 
 typedef NS_ENUM(NSInteger, MenuTab) {
-    MenuTabInfo = 0,
+    MenuTabAimbot = 0,
     MenuTabESP,
-    MenuTabAimbot,
-    MenuTabSkin,
+    MenuTabWorld,
+    MenuTabSettings,
+    MenuTabProfile,
     MenuTabExtra
 };
 
@@ -90,8 +91,11 @@ typedef NS_ENUM(NSInteger, MenuTab) {
 @property (nonatomic, strong) NSMutableDictionary *checkboxStates;
 @property (nonatomic, strong) UIButton *headerButton;
 @property (nonatomic, strong) UIButton *closeButton;
+@property (nonatomic, strong) UIButton *themeButton;
 @property (nonatomic, assign) CGFloat panelWidth;
 @property (nonatomic, assign) CGFloat panelHeight;
+@property (nonatomic, strong) UILabel *headerTitleLabel;
+@property (nonatomic, strong) UIImageView *headerIconView;
 
 @end
 
@@ -102,11 +106,11 @@ ImFont *_espFont;
 #pragma mark - Theme & Colors
 
 - (UIColor *)backgroundColor {
-    return isDarkMode ? [UIColor colorWithRed:0.07 green:0.08 blue:0.11 alpha:1.0] : [UIColor colorWithRed:0.95 green:0.95 blue:0.95 alpha:1.0];
+    return isDarkMode ? [UIColor colorWithRed:0.09 green:0.09 blue:0.11 alpha:0.95] : [UIColor colorWithRed:0.95 green:0.95 blue:0.95 alpha:0.95];
 }
 
 - (UIColor *)textColor {
-    return isDarkMode ? [UIColor whiteColor] : [UIColor blackColor];
+    return isDarkMode ? [UIColor colorWithWhite:0.92 alpha:1.0] : [UIColor blackColor];
 }
 
 - (UIColor *)secondaryTextColor {
@@ -114,22 +118,18 @@ ImFont *_espFont;
 }
 
 - (UIColor *)accentColor {
-    return [UIColor colorWithRed:0.18 green:0.42 blue:0.75 alpha:1.0];
-}
-
-- (UIColor *)pillColor {
-    return isDarkMode ? [UIColor colorWithRed:0.11 green:0.12 blue:0.16 alpha:1.0] : [UIColor colorWithWhite:0.92 alpha:1.0];
+    return [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0];
 }
 
 - (UIColor *)sidebarBackgroundColor {
-    return isDarkMode ? [UIColor colorWithRed:0.09 green:0.10 blue:0.14 alpha:1.0] : [UIColor colorWithRed:0.90 green:0.90 blue:0.92 alpha:1.0];
+    return isDarkMode ? [UIColor colorWithRed:0.07 green:0.07 blue:0.09 alpha:1.0] : [UIColor colorWithRed:0.90 green:0.90 blue:0.92 alpha:1.0];
 }
 
 - (UIColor *)sidebarButtonColor:(BOOL)selected {
     if (isDarkMode) {
-        return selected ? [UIColor colorWithRed:0.13 green:0.31 blue:0.58 alpha:1.0] : [UIColor colorWithRed:0.09 green:0.10 blue:0.14 alpha:1.0];
+        return selected ? [UIColor colorWithRed:0.14 green:0.14 blue:0.18 alpha:1.0] : [UIColor clearColor];
     } else {
-        return selected ? [[self accentColor] colorWithAlphaComponent:0.15] : [UIColor whiteColor];
+        return selected ? [[self accentColor] colorWithAlphaComponent:0.15] : [UIColor clearColor];
     }
 }
 
@@ -157,7 +157,6 @@ ImFont *_espFont;
     ImFontConfig cfg;
     cfg.OversampleH = 2; cfg.OversampleV = 2;
     
-    // Soporte seguro de fuentes integradas por defecto o fallback
 #ifdef DEF_FONT_SIZE
     ImFont* mainFont = io.Fonts->AddFontFromMemoryTTF((void*)DefaultFontData, (int)DefaultFontSize, 16.0f, &cfg, gVietRanges.Data);
     ImFont* bigFont  = io.Fonts->AddFontFromMemoryTTF((void*)DefaultFontData, (int)DefaultFontSize, 32.0f, &cfg, gVietRanges.Data);
@@ -216,9 +215,9 @@ ImFont *_espFont;
     self.mtkView.backgroundColor = [UIColor clearColor];
     self.mtkView.clipsToBounds   = YES;
     
-    self.panelWidth  = 460;
-    self.panelHeight = 310;
-    self.currentTab = MenuTabESP;
+    self.panelWidth  = 480;
+    self.panelHeight = 270;
+    self.currentTab = MenuTabAimbot;
     self.tabButtons = [NSMutableArray array];
     self.checkboxStates = [NSMutableDictionary dictionary];
     
@@ -234,12 +233,13 @@ ImFont *_espFont;
 #pragma mark - UIKit Setup
 
 - (void)setupFloatingPanel {
-    self.floatingPanel = [[UIView alloc] initWithFrame:CGRectMake(30, 40, self.panelWidth, self.panelHeight)];
+    self.floatingPanel = [[UIView alloc] initWithFrame:CGRectMake(40, 40, self.panelWidth, self.panelHeight)];
     self.floatingPanel.backgroundColor = [self backgroundColor];
     self.floatingPanel.clipsToBounds = YES;
+    self.floatingPanel.layer.cornerRadius = 14;
     self.floatingPanel.layer.masksToBounds = NO;
     self.floatingPanel.layer.borderWidth = 1.0;
-    self.floatingPanel.layer.borderColor = [UIColor colorWithRed:0.22 green:0.32 blue:0.5 alpha:0.6].CGColor;
+    self.floatingPanel.layer.borderColor = [UIColor colorWithRed:0.25 green:0.12 blue:0.14 alpha:0.8].CGColor;
     
     self.floatingPanel.alpha = 1.0f;
     self.floatingPanel.transform = CGAffineTransformMakeScale(1.0f, 1.0f);
@@ -258,42 +258,33 @@ ImFont *_espFont;
 }
 
 - (void)setupSidebar {
-    self.sidebarBg = [[UIView alloc] initWithFrame:CGRectMake(0, 40, kSidebarWidth, self.panelHeight - 40)];
+    self.sidebarBg = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kSidebarWidth, self.panelHeight)];
     self.sidebarBg.backgroundColor = [self sidebarBackgroundColor];
     [self.floatingPanel addSubview:self.sidebarBg];
 
-    UIView *sep = [[UIView alloc] initWithFrame:CGRectMake(kSidebarWidth - 0.5, 0, 0.5, self.panelHeight - 40)];
-    sep.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.08];
+    UIView *sep = [[UIView alloc] initWithFrame:CGRectMake(kSidebarWidth - 0.5, 0, 0.5, self.panelHeight)];
+    sep.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.06];
     [self.sidebarBg addSubview:sep];
 
-    NSArray *titles = @[@"Info", @"ESP", @"AimBot", @"Skin", @"Extra"];
-    NSArray *icons  = @[@"info.circle", @"scope", @"target", @"person.crop.rectangle", @"square.grid.2x2"];
-    NSInteger count = titles.count;
+    NSArray *icons = @[@"scope", @"eye", @"cube", @"gearshape", @"person", @"square.and.arrow.down"];
+    NSInteger count = icons.count;
 
-    self.sidebarView = [[UIView alloc] initWithFrame:CGRectMake(0, 8, kSidebarWidth, self.panelHeight - 48)];
+    self.sidebarView = [[UIView alloc] initWithFrame:CGRectMake(0, 12, kSidebarWidth, self.panelHeight - 12)];
     [self.sidebarBg addSubview:self.sidebarView];
 
     for (int i = 0; i < (int)count; i++) {
         CGFloat btnY = i * (kTabItemHeight + kTabSpacing);
-        UIButton *btn = [[UIButton alloc] initWithFrame:CGRectMake(6, btnY, kSidebarWidth - 12, kTabItemHeight)];
+        UIButton *btn = [[UIButton alloc] initWithFrame:CGRectMake(8, btnY, kSidebarWidth - 16, kTabItemHeight)];
         btn.backgroundColor = [self sidebarButtonColor:(i == self.currentTab)];
-        btn.layer.cornerRadius = 8;
+        btn.layer.cornerRadius = 10;
         btn.tag = i;
 
-        UIImageView *iv = [[UIImageView alloc] initWithFrame:CGRectMake(12, 8, 18, 18)];
-        iv.image = [[UIImage systemImageNamed:icons[i]] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightMedium]];
-        iv.tintColor = (i == self.currentTab) ? [UIColor whiteColor] : [UIColor colorWithWhite:0.6 alpha:1.0];
+        UIImageView *iv = [[UIImageView alloc] initWithFrame:CGRectMake((kSidebarWidth - 16 - 20)/2.0, (kTabItemHeight - 20)/2.0, 20, 20)];
+        iv.image = [[UIImage systemImageNamed:icons[i]] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:15 weight:UIImageSymbolWeightMedium]];
+        iv.tintColor = (i == self.currentTab) ? [UIColor colorWithRed:0.95 green:0.25 blue:0.28 alpha:1.0] : [UIColor colorWithWhite:0.5 alpha:1.0];
         iv.contentMode = UIViewContentModeScaleAspectFit;
         iv.tag = 100;
         [btn addSubview:iv];
-
-        UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(10, 26, kSidebarWidth - 20, 16)];
-        lbl.text = titles[i];
-        lbl.font = [UIFont systemFontOfSize:11 weight:UIFontWeightMedium];
-        lbl.textColor = (i == self.currentTab) ? [UIColor whiteColor] : [UIColor colorWithWhite:0.6 alpha:1.0];
-        lbl.textAlignment = NSTextAlignmentCenter;
-        lbl.tag = 101;
-        [btn addSubview:lbl];
 
         [btn addTarget:self action:@selector(tabButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
         [self.sidebarView addSubview:btn];
@@ -302,28 +293,47 @@ ImFont *_espFont;
 }
 
 - (void)setupHeaderBar {
-    CGFloat hdrH = 40.0f;
-    UIView *headerBar = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.panelWidth, hdrH)];
-    headerBar.backgroundColor = [UIColor colorWithRed:0.12 green:0.24 blue:0.44 alpha:1.0];
+    CGFloat hdrH = 44.0f;
+    UIView *headerBar = [[UIView alloc] initWithFrame:CGRectMake(kSidebarWidth, 0, self.panelWidth - kSidebarWidth, hdrH)];
+    headerBar.backgroundColor = [UIColor clearColor];
     [self.floatingPanel addSubview:headerBar];
 
-    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(12, 0, self.panelWidth - 60, hdrH)];
-    titleLabel.text = @"VN TOOL IPA VIP";
-    titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightBold];
-    titleLabel.textColor = [UIColor whiteColor];
-    [headerBar addSubview:titleLabel];
+    self.headerIconView = [[UIImageView alloc] initWithFrame:CGRectMake(12, (hdrH - 18)/2.0, 18, 18)];
+    self.headerIconView.image = [[UIImage systemImageNamed:@"scope"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightBold]];
+    self.headerIconView.tintColor = [UIColor colorWithRed:0.95 green:0.25 blue:0.28 alpha:1.0];
+    self.headerIconView.contentMode = UIViewContentModeScaleAspectFit;
+    [headerBar addSubview:self.headerIconView];
 
-    CGFloat closeBtnSize = 24.0f;
+    self.headerTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(36, 0, 150, hdrH)];
+    self.headerTitleLabel.text = @"AIMBOT";
+    self.headerTitleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightBold];
+    self.headerTitleLabel.textColor = [UIColor colorWithRed:0.95 green:0.25 blue:0.28 alpha:1.0];
+    [headerBar addSubview:self.headerTitleLabel];
+
+    CGFloat btnSize = 26.0f;
+    CGFloat rightSpacing = 12.0f;
+    
     self.closeButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    self.closeButton.frame = CGRectMake(self.panelWidth - 32, (hdrH - closeBtnSize)/2.0f, closeBtnSize, closeBtnSize);
+    self.closeButton.frame = CGRectMake(headerBar.frame.size.width - btnSize - rightSpacing, (hdrH - btnSize)/2.0f, btnSize, btnSize);
+    self.closeButton.backgroundColor = [UIColor colorWithRed:0.16 green:0.16 blue:0.20 alpha:1.0];
+    self.closeButton.layer.cornerRadius = btnSize / 2.0;
     [self.closeButton setImage:[[UIImage systemImageNamed:@"xmark"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
-    self.closeButton.tintColor = [UIColor whiteColor];
+    self.closeButton.tintColor = [UIColor colorWithWhite:0.8 alpha:1.0];
     [self.closeButton addTarget:self action:@selector(animateClose) forControlEvents:UIControlEventTouchUpInside];
     [headerBar addSubview:self.closeButton];
+
+    self.themeButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    self.themeButton.frame = CGRectMake(self.closeButton.frame.origin.x - btnSize - 8, (hdrH - btnSize)/2.0f, btnSize, btnSize);
+    self.themeButton.backgroundColor = [UIColor colorWithRed:0.16 green:0.16 blue:0.20 alpha:1.0];
+    self.themeButton.layer.cornerRadius = btnSize / 2.0;
+    [self.themeButton setImage:[[UIImage systemImageNamed:@"moon.fill"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightMedium]] forState:UIControlStateNormal];
+    self.themeButton.tintColor = [UIColor colorWithRed:0.95 green:0.25 blue:0.28 alpha:1.0];
+    [self.themeButton addTarget:self action:@selector(toggleTheme) forControlEvents:UIControlEventTouchUpInside];
+    [headerBar addSubview:self.themeButton];
 }
 
 - (void)setupContentArea {
-    CGFloat hdrH = 40.0f;
+    CGFloat hdrH = 44.0f;
     CGFloat h = self.panelHeight - hdrH;
     CGFloat w = self.panelWidth - kSidebarWidth;
 
@@ -349,11 +359,16 @@ ImFont *_espFont;
 - (void)updateSidebarForTab:(MenuTab)tab {
     for (UIButton *btn in self.tabButtons) {
         UIImageView *iv = [btn viewWithTag:100];
-        UILabel *lbl = [btn viewWithTag:101];
         BOOL sel = (btn.tag == tab);
-        iv.tintColor = sel ? [UIColor whiteColor] : [UIColor colorWithWhite:0.6 alpha:1.0];
-        lbl.textColor = sel ? [UIColor whiteColor] : [UIColor colorWithWhite:0.6 alpha:1.0];
+        iv.tintColor = sel ? [UIColor colorWithRed:0.95 green:0.25 blue:0.28 alpha:1.0] : [UIColor colorWithWhite:0.5 alpha:1.0];
         btn.backgroundColor = [self sidebarButtonColor:sel];
+    }
+    
+    NSArray *titles = @[@"AIMBOT", @"ESP", @"WORLD", @"SETTINGS", @"PROFILE", @"EXTRA"];
+    NSArray *icons = @[@"scope", @"eye", @"cube", @"gearshape", @"person", @"square.and.arrow.down"];
+    if (tab < titles.count) {
+        self.headerTitleLabel.text = titles[tab];
+        self.headerIconView.image = [[UIImage systemImageNamed:icons[tab]] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightBold]];
     }
 }
 
@@ -361,110 +376,120 @@ ImFont *_espFont;
     for (UIView *v in self.contentContainer.subviews) [v removeFromSuperview];
     
     CGFloat w = self.contentScrollView.frame.size.width;
-    CGFloat y = 14;
+    CGFloat y = 8;
     
     switch (tab) {
-        case MenuTabInfo:
-            y = [self addInfoContent:y width:w];
+        case MenuTabAimbot:
+            y = [self addAimbotContent:y width:w];
             break;
         case MenuTabESP:
             y = [self addESPContent:y width:w];
             break;
-        case MenuTabAimbot:
-            y = [self addPlaceholderContent:@"AimBot Options" atY:y width:w];
+        case MenuTabWorld:
+            y = [self addPlaceholderContent:@"World & Visual Options" atY:y width:w];
             break;
-        case MenuTabSkin:
-            y = [self addPlaceholderContent:@"Skin Options" atY:y width:w];
+        case MenuTabSettings:
+            y = [self addPlaceholderContent:@"Menu Settings & Configs" atY:y width:w];
+            break;
+        case MenuTabProfile:
+            y = [self addPlaceholderContent:@"Profile & License Info" atY:y width:w];
             break;
         case MenuTabExtra:
-            y = [self addPlaceholderContent:@"Extra Options" atY:y width:w];
+            y = [self addPlaceholderContent:@"Extra Utilities & Tools" atY:y width:w];
             break;
     }
     
-    self.contentContainer.frame = CGRectMake(0, 0, w, y + 20);
+    self.contentContainer.frame = CGRectMake(0, 0, w, y + 16);
     self.contentScrollView.contentSize = self.contentContainer.bounds.size;
 }
 
 #pragma mark - Content Builders
 
-- (CGFloat)addESPContent:(CGFloat)y width:(CGFloat)w {
-    NSArray *leftColumn = @[@"Enable Cheats", @"Line", @"Name", @"3D Circle", @"Count"];
-    NSArray *rightColumn = @[@"Box", @"Skeleton", @"Outline"];
+- (CGFloat)addAimbotContent:(CGFloat)y width:(CGFloat)w {
+    y = [self addNoticeBanner:@"Hack Do MinhiOS Phát Triển. Cảm Ơn Đã Sử Dụng Phiên Bản Này" atY:y width:w];
     
-    CGFloat colWidth = (w - 30) / 2.0;
-    CGFloat leftX = 12;
-    CGFloat rightX = leftX + colWidth + 10;
+    NSArray *options = @[@"Bật Aimbot", @"ab_silent", @"Không Aim Sau Tường", @"Kiểm Tra Địch", @"Bỏ qua địch gục"];
     
+    CGFloat itemW = w - 24;
     CGFloat currentY = y;
-    NSInteger maxRows = MAX(leftColumn.count, rightColumn.count);
     
-    for (int i = 0; i < maxRows; i++) {
-        CGFloat rowH = 32;
-        if (i < leftColumn.count) {
-            [self addCheckboxItem:leftColumn[i] atFrame:CGRectMake(leftX, currentY, colWidth, rowH)];
-        }
-        if (i < rightColumn.count) {
-            [self addCheckboxItem:rightColumn[i] atFrame:CGRectMake(rightX, currentY, colWidth, rowH)];
-        }
-        currentY += rowH + 8;
+    for (NSString *title in options) {
+        CGFloat rowH = 34;
+        [self addToggleItem:title atFrame:CGRectMake(12, currentY, itemW, rowH)];
+        currentY += rowH + 6;
     }
     return currentY;
 }
 
-- (CGFloat)addInfoContent:(CGFloat)y width:(CGFloat)w {
-    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(14, y, w - 28, 60)];
-    lbl.text = @"Welcome to VN TOOL IPA VIP.\nSelect a category from the sidebar to configure options.";
+- (CGFloat)addESPContent:(CGFloat)y width:(CGFloat)w {
+    NSArray *options = @[@"Enable Cheats", @"Box ESP", @"Line ESP", @"Name ESP", @"Skeleton ESP", @"Distance"];
+    CGFloat itemW = w - 24;
+    CGFloat currentY = y;
+    
+    for (NSString *title in options) {
+        CGFloat rowH = 34;
+        [self addToggleItem:title atFrame:CGRectMake(12, currentY, itemW, rowH)];
+        currentY += rowH + 6;
+    }
+    return currentY;
+}
+
+- (CGFloat)addNoticeBanner:(NSString *)text atY:(CGFloat)y width:(CGFloat)w {
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y, w - 24, 28)];
+    lbl.text = text;
+    lbl.font = [UIColor fontWithName:@"Helvetica" size:10] ? [UIFont systemFontOfSize:10 weight:UIFontWeightMedium] : [UIFont systemFontOfSize:10];
+    lbl.textColor = [UIColor colorWithWhite:0.7 alpha:1.0];
+    lbl.numberOfLines = 1;
+    [self.contentContainer addSubview:lbl];
+    return y + 32;
+}
+
+- (CGFloat)addPlaceholderContent:(NSString *)text atY:(CGFloat)y width:(CGFloat)w {
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y + 20, w - 24, 40)];
+    lbl.text = text;
     lbl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
-    lbl.textColor = [self textColor];
-    lbl.numberOfLines = 0;
+    lbl.textColor = [self secondaryTextColor];
+    lbl.textAlignment = NSTextAlignmentCenter;
     [self.contentContainer addSubview:lbl];
     return y + 70;
 }
 
-- (CGFloat)addPlaceholderContent:(NSString *)text atY:(CGFloat)y width:(CGFloat)w {
-    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(14, y, w - 28, 40)];
-    lbl.text = text;
-    lbl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
-    lbl.textColor = [self secondaryTextColor];
-    [self.contentContainer addSubview:lbl];
-    return y + 50;
-}
-
-- (void)addCheckboxItem:(NSString *)title atFrame:(CGRect)frame {
+- (void)addToggleItem:(NSString *)title atFrame:(CGRect)frame {
     UIView *container = [[UIView alloc] initWithFrame:frame];
+    container.backgroundColor = [UIColor colorWithRed:0.13 green:0.13 blue:0.16 alpha:1.0];
+    container.layer.cornerRadius = 8;
     
     BOOL isOn = [self.checkboxStates[title] boolValue];
     
-    UIButton *boxBtn = [[UIButton alloc] initWithFrame:CGRectMake(0, (frame.size.height - 22)/2.0, 22, 22)];
-    boxBtn.backgroundColor = isOn ? [UIColor colorWithRed:0.18 green:0.42 blue:0.75 alpha:1.0] : [UIColor colorWithRed:0.15 green:0.16 blue:0.22 alpha:1.0];
-    boxBtn.layer.cornerRadius = 6;
-    boxBtn.layer.borderWidth = 1.0;
-    boxBtn.layer.borderColor = [UIColor colorWithRed:0.25 green:0.35 blue:0.55 alpha:1.0].CGColor;
+    CGFloat switchSize = 20.0f;
+    UIButton *boxBtn = [[UIButton alloc] initWithFrame:CGRectMake(frame.size.width - switchSize - 12, (frame.size.height - switchSize)/2.0, switchSize, switchSize)];
+    boxBtn.backgroundColor = isOn ? [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0] : [UIColor colorWithRed:0.22 green:0.22 blue:0.26 alpha:1.0];
+    boxBtn.layer.cornerRadius = switchSize / 2.0;
     
     if (isOn) {
-        [boxBtn setImage:[[UIImage systemImageNamed:@"checkmark"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
+        [boxBtn setImage:[[UIImage systemImageNamed:@"checkmark"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:9 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
         boxBtn.tintColor = [UIColor whiteColor];
     }
     
     boxBtn.tag = 999;
     
-    UILabel *titleLbl = [[UILabel alloc] initWithFrame:CGRectMake(30, 0, frame.size.width - 30, frame.size.height)];
+    UILabel *titleLbl = [[UILabel alloc] initWithFrame:CGRectMake(12, 0, frame.size.width - 50, frame.size.height)];
     titleLbl.text = title;
-    titleLbl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightRegular];
+    titleLbl.font = [UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
     titleLbl.textColor = [self textColor];
     
     UIButton *hitBox = [[UIButton alloc] initWithFrame:container.bounds];
     hitBox.accessibilityLabel = title;
-    [hitBox addTarget:self action:@selector(checkboxTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [hitBox addTarget:self action:@selector(toggleTapped:) forControlEvents:UIControlEventTouchUpInside];
     
-    [container addSubview:boxBtn];
     [container addSubview:titleLbl];
+    [container addSubview:boxBtn];
     [container addSubview:hitBox];
     
     [self.contentContainer addSubview:container];
 }
 
-- (void)checkboxTapped:(UIButton *)sender {
+- (void)toggleTapped:(UIButton *)sender {
     UIView *container = sender.superview;
     UILabel *titleLbl = nil;
     UIButton *boxBtn = nil;
@@ -480,9 +505,9 @@ ImFont *_espFont;
         BOOL newState = !current;
         self.checkboxStates[key] = @(newState);
         
-        boxBtn.backgroundColor = newState ? [UIColor colorWithRed:0.18 green:0.42 blue:0.75 alpha:1.0] : [UIColor colorWithRed:0.15 green:0.16 blue:0.22 alpha:1.0];
+        boxBtn.backgroundColor = newState ? [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0] : [UIColor colorWithRed:0.22 green:0.22 blue:0.26 alpha:1.0];
         if (newState) {
-            [boxBtn setImage:[[UIImage systemImageNamed:@"checkmark"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
+            [boxBtn setImage:[[UIImage systemImageNamed:@"checkmark"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:9 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
             boxBtn.tintColor = [UIColor whiteColor];
         } else {
             [boxBtn setImage:nil forState:UIControlStateNormal];
@@ -494,6 +519,14 @@ ImFont *_espFont;
 
 - (void)animateClose {
     MenDeal = false;
+}
+
+- (void)toggleTheme {
+    isDarkMode = !isDarkMode;
+    self.floatingPanel.backgroundColor = [self backgroundColor];
+    self.sidebarBg.backgroundColor = [self sidebarBackgroundColor];
+    [self updateSidebarForTab:self.currentTab];
+    [self loadTabContent:self.currentTab];
 }
 
 #pragma mark - Render Loop
