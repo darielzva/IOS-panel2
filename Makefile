@@ -8,17 +8,17 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = 34306jit
 
-# Configuración de compilación C++ y C
-$(TWEAK_NAME)_CCFLAGS = -std=c++17 -fno-rtti -DNDEBUG -Wall -Wno-unused-variable -Wno-unused-function -Wno-unused-value -fvisibility=hidden -I./JRMemory -I./fmt
-$(TWEAK_NAME)_CFLAGS = -fobjc-arc -Wall -Wno-unused-variable -Wno-unused-function -Wno-unused-value -fvisibility=hidden -I./JRMemory -I./fmt
+# Optimización agresiva y eliminación de símbolos muertos para reducir tamaño
+$(TWEAK_NAME)_CCFLAGS = -std=c++17 -fno-rtti -DNDEBUG -O3 -flto -Wall -Wno-unused-variable -Wno-unused-function -Wno-unused-value -fvisibility=hidden -ffunction-sections -fdata-sections -I./JRMemory -I./fmt
+$(TWEAK_NAME)_CFLAGS = -fobjc-arc -O3 -flto -Wall -Wno-unused-variable -Wno-unused-function -Wno-unused-value -fvisibility=hidden -ffunction-sections -fdata-sections -I./JRMemory -I./fmt
 
-# Frameworks necesarios para la interfaz gráfica y el sistema
-$(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation Security QuartzCore CoreGraphics CoreText AVFoundation Accelerate GLKit SystemConfiguration GameController JRMemory
+# Frameworks esenciales limpios (removidos extras que inflan o generan dylibs fantasma)
+$(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation QuartzCore CoreGraphics CoreText OpenGLES Metal MetalKit
 
-# Enlace de librerías estáticas y frameworks personalizados
-$(TWEAK_NAME)_LDFLAGS += Other/libdobby_fixed.a -F./JRMemory
+# Enlace de librerías estáticas y optimizador de enlace (-dead_strip)
+$(TWEAK_NAME)_LDFLAGS += Other/libdobby_fixed.a -Wl,-dead_strip
 
-# Archivos fuente adaptados a tu nueva estructura de carpetas
+# Archivos fuente explícitos para evitar escaneos recursivos erróneos
 $(TWEAK_NAME)_FILES = ImGuiDrawView.mm \
                       oxorany/oxorany.cpp \
                       $(wildcard Esp/*.mm) \
@@ -32,3 +32,8 @@ $(TWEAK_NAME)_FILES = ImGuiDrawView.mm \
                       $(wildcard fmt/*.cc)
 
 include $(THEOS_MAKE_PATH)/tweak.mk
+
+# Forzar limpieza total de símbolos de depuración tras empaquetar
+after-stage::
+	@echo "Limpiando símbolos y reduciendo peso del binario..."
+	@strip -x "$(THEOS_STAGING_DIR)/Library/MobileSubstrate/DynamicLibraries/$(TWEAK_NAME).dylib"
