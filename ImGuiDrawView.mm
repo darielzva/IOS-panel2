@@ -1,10 +1,10 @@
-//Require standard library
+// Code By VanNghia (Updated for Reference UI Structure)
 #import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
 #import <Foundation/Foundation.h>
 #include <iostream>
 #import <UIKit/UIKit.h>
-#import <vector>
+#include <vector>
 #import "pthread.h"
 #include <array>
 #import <os/log.h>
@@ -21,68 +21,113 @@
 #include <cinttypes>
 #include <cerrno>
 #include <cctype>
-//Imgui library
-#import "Esp/CaptainHook.h"
-#import "Esp/ImGuiDrawView.h"
+#import <objc/message.h>
+#import <objc/runtime.h>
+#import <WebKit/WebKit.h>
+
+#pragma clang diagnostic ignored "-Wunguarded-availability-new"
+#pragma clang diagnostic ignored "-Wavailability"
+
 #import "IMGUI/imgui.h"
 #import "IMGUI/imgui_internal.h"
 #import "IMGUI/imgui_impl_metal.h"
-#import "IMGUI/zzz.h"
 #include "oxorany/oxorany_include.h"
-#import "Helper/Mem.h"
-#include "font.h"
 #import "Helper/Vector3.h"
 #import "Helper/Vector2.h"
 #import "Helper/Quaternion.h"
 #import "Helper/Monostring.h"
 #include "Helper/font.h"
 #include "Helper/data.h"
+
 ImFont* verdana_smol;
 ImFont* pixel_big = {};
 ImFont* pixel_smol = {};
+
 #include "Helper/Obfuscate.h"
-#import "Helper/Hooks.h"
 #include <OpenGLES/ES2/gl.h>
 #include <OpenGLES/ES2/glext.h>
 #include <unistd.h>
-#include <string.h>
-#include "Other/dobby_defines.h"
-#import "Other/H5hook.h"
-#include "Other/Paste.h"
 
-#define Hook(x, y, z) \
-{ \
-    NSString* result_##y = StaticInlineHookPatch(("Frameworks/UnityFramework.framework/UnityFramework"), x, nullptr); \
-    if (result_##y) { \
-        void* result = StaticInlineHookFunction(("Frameworks/UnityFramework.framework/UnityFramework"), x, (void *) y); \
-        *(void **) (&z) = (void*) result; \
-    } \
-}
+#define kWidth  [UIScreen mainScreen].bounds.size.width
+#define kHeight [UIScreen mainScreen].bounds.size.height
+#define kScale  [UIScreen mainScreen].scale
 
-static float fixLoginTimeout = 60.0f;
-static bool MenDeal = true;
-static char menuTitle[64] = "VN TOOL IPA VIP "; 
+static const CGFloat kSidebarWidth     = 96;
+static const CGFloat kTabItemHeight    = 48;
+static const CGFloat kTabSpacing       = 4;
+static const CGFloat kContentPadding   = 12;
 
-@interface ImGuiDrawView () <MTKViewDelegate, UITextFieldDelegate>
+typedef NS_ENUM(NSInteger, MenuTab) {
+    MenuTabInfo = 0,
+    MenuTabESP,
+    MenuTabAimbot,
+    MenuTabSkin,
+    MenuTabExtra
+};
+
+@interface ImGuiDrawView () <MTKViewDelegate, UIGestureRecognizerDelegate>
+
 @property (nonatomic, strong) id <MTLDevice> device;
 @property (nonatomic, strong) id <MTLCommandQueue> commandQueue;
-@property (nonatomic, strong) UITextField *invisibleTextField;
-@property (nonatomic, readonly) MTKView *mtkView; 
+
+@property (nonatomic, strong) UIView *floatingPanel;
+@property (nonatomic, strong) UIView *sidebarView;
+@property (nonatomic, strong) UIView *sidebarBg;
+@property (nonatomic, strong) UIScrollView *contentScrollView;
+@property (nonatomic, strong) UIView *contentContainer;
+@property (nonatomic, assign) MenuTab currentTab;
+@property (nonatomic, strong) NSMutableArray *tabButtons;
+@property (nonatomic, strong) NSMutableDictionary *checkboxStates;
+@property (nonatomic, strong) UIButton *headerButton;
+@property (nonatomic, strong) UIButton *closeButton;
+@property (nonatomic, assign) CGFloat panelWidth;
+@property (nonatomic, assign) CGFloat panelHeight;
+
 @end
 
 @implementation ImGuiDrawView
 
 ImFont *_espFont;
-ImFont* verdanab;
-ImFont* icons;
-ImFont* interb;
-ImFont* Urbanist;
 
-- (MTKView *)mtkView { return (MTKView *)self.view; }
+#pragma mark - Theme & Colors
 
-- (instancetype)initWithNibName:(nullable NSString *)nibNameOrNil bundle:(nullable NSBundle *)nibBundleOrNil
-{
+- (UIColor *)backgroundColor {
+    return isDarkMode ? [UIColor colorWithRed:0.07 green:0.08 blue:0.11 alpha:1.0] : [UIColor colorWithRed:0.95 green:0.95 blue:0.95 alpha:1.0];
+}
+
+- (UIColor *)textColor {
+    return isDarkMode ? [UIColor whiteColor] : [UIColor blackColor];
+}
+
+- (UIColor *)secondaryTextColor {
+    return [UIColor colorWithWhite:0.6 alpha:1.0];
+}
+
+- (UIColor *)accentColor {
+    return [UIColor colorWithRed:0.18 green:0.42 blue:0.75 alpha:1.0];
+}
+
+- (UIColor *)pillColor {
+    return isDarkMode ? [UIColor colorWithRed:0.11 green:0.12 blue:0.16 alpha:1.0] : [UIColor colorWithWhite:0.92 alpha:1.0];
+}
+
+- (UIColor *)sidebarBackgroundColor {
+    return isDarkMode ? [UIColor colorWithRed:0.09 green:0.10 blue:0.14 alpha:1.0] : [UIColor colorWithRed:0.90 green:0.90 blue:0.92 alpha:1.0];
+}
+
+- (UIColor *)sidebarButtonColor:(BOOL)selected {
+    if (isDarkMode) {
+        return selected ? [UIColor colorWithRed:0.13 green:0.31 blue:0.58 alpha:1.0] : [UIColor colorWithRed:0.09 green:0.10 blue:0.14 alpha:1.0];
+    } else {
+        return selected ? [[self accentColor] colorWithAlphaComponent:0.15] : [UIColor whiteColor];
+    }
+}
+
+#pragma mark - Setup & Lifecycle
+
+- (instancetype)initWithNibName:(nullable NSString *)nibNameOrNil bundle:(nullable NSBundle *)nibBundleOrNil {
     self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    
     _device = MTLCreateSystemDefaultDevice();
     _commandQueue = [_device newCommandQueue];
     if (!self.device) abort();
@@ -90,66 +135,42 @@ ImFont* Urbanist;
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.IniFilename = nullptr;
 
-    ImGui::StyleColorsDark();
-    auto& Style = ImGui::GetStyle();
-    
-    Style.WindowRounding = 12.0f;    
-    Style.ChildRounding = 8.0f;
-    Style.FrameRounding = 6.0f;      
-    Style.PopupRounding = 6.0f;
-    Style.GrabRounding = 9.0f;     
-    Style.TabRounding = 8.0f;       
-    Style.ScrollbarRounding = 9.0f; 
-    Style.WindowBorderSize = 0.0f;  
-    Style.FrameBorderSize = 1.0f;   
+    static ImVector<ImWchar> gVietRanges;
+    {
+        ImFontGlyphRangesBuilder builder;
+        builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+        builder.AddRanges(io.Fonts->GetGlyphRangesVietnamese());
+        builder.BuildRanges(&gVietRanges);
+    }
+    ImFontConfig cfg;
+    cfg.OversampleH = 2; cfg.OversampleV = 2;
+    ImFont* mainFont = io.Fonts->AddFontFromMemoryTTF((void*)NotoSansViet, (int)sizeof(NotoSansViet), 16.0f, &cfg, gVietRanges.Data);
+    ImFont* bigFont = io.Fonts->AddFontFromMemoryTTF((void*)NotoSansViet, (int)sizeof(NotoSansViet), 32.0f, &cfg, gVietRanges.Data);
 
-    ImFont* font = io.Fonts->AddFontFromMemoryTTF(sansbold, sizeof(sansbold), 15.0f, NULL, io.Fonts->GetGlyphRangesCyrillic());
-    verdana_smol = io.Fonts->AddFontFromMemoryTTF(verdana, sizeof verdana, 40, NULL, io.Fonts->GetGlyphRangesCyrillic());
-    pixel_big = io.Fonts->AddFontFromMemoryTTF((void*)smallestpixel, sizeof smallestpixel, 128, NULL, io.Fonts->GetGlyphRangesCyrillic());
-    pixel_smol = io.Fonts->AddFontFromMemoryTTF((void*)smallestpixel, sizeof smallestpixel, 10*2, NULL, io.Fonts->GetGlyphRangesCyrillic());
-    
+    verdana_smol = mainFont;
+    pixel_big    = bigFont;
+    pixel_smol   = mainFont;
+
     ImGui_ImplMetal_Init(_device);
     return self;
 }
 
++ (void)showChange:(BOOL)open {
+    MenDeal = open;
+}
+
+- (MTKView *)mtkView { return (MTKView *)self.view; }
+
 - (void)loadView {
-    self.view = [[MTKView alloc] initWithFrame:[UIScreen mainScreen].bounds];
+    CGFloat w = [UIApplication sharedApplication].windows[0].rootViewController.view.frame.size.width;
+    CGFloat h = [UIApplication sharedApplication].windows[0].rootViewController.view.frame.size.height;
+    self.view = [[MTKView alloc] initWithFrame:CGRectMake(0, 0, w, h)];
 }
 
-- (void)viewDidLoad {
-    [super viewDidLoad];
-    self.mtkView.device = self.device;
-    self.mtkView.delegate = self;
-    self.mtkView.clearColor = MTLClearColorMake(0, 0, 0, 0);
-    self.mtkView.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:0];
-    self.mtkView.clipsToBounds = YES;
+#pragma mark - Touch Forwarding to ImGui
 
-    self.invisibleTextField = [[UITextField alloc] initWithFrame:CGRectZero];
-    self.invisibleTextField.delegate = self;
-    [self.invisibleTextField addTarget:self action:@selector(textFieldDidChange:) forControlEvents:UIControlEventEditingChanged];
-    [self.view addSubview:self.invisibleTextField];
-
-    Hook(oxo("0x4EB3E88") , BLAGCMCGEJG1, old_BLAGCMCGEJG1);
-    Hook(0x1C2549C, Hook_UpdateLocalMark, orig_UpdateLocalMark);
-    Hook(0x56524D4 , old_AutoFire, _AutoFire);
-    Hook(0x44C752C, hk_get_ResetGuest, old_get_ResetGuest);
-}
-
-- (void)textFieldDidChange:(UITextField *)textField {
-    if (textField.text.length > 0) {
-        strncpy(menuTitle, [textField.text UTF8String], sizeof(menuTitle) - 1);
-    } else {
-        strcpy(menuTitle, " "); 
-    }
-}
-
-- (BOOL)textFieldShouldReturn:(UITextField *)textField {
-    [textField resignFirstResponder];
-    return YES;
-}
-
-#pragma mark - Interaction
 - (void)updateIOWithTouchEvent:(UIEvent *)event {
     UITouch *anyTouch = event.allTouches.anyObject;
     CGPoint touchLocation = [anyTouch locationInView:self.view];
@@ -164,201 +185,342 @@ ImFont* Urbanist;
     }
     io.MouseDown[0] = hasActiveTouch;
 }
-- (void)touchesBegan:(NSSet*)t withEvent:(UIEvent*)e { [self updateIOWithTouchEvent:e]; }
-- (void)touchesMoved:(NSSet*)t withEvent:(UIEvent*)e { [self updateIOWithTouchEvent:e]; }
-- (void)touchesEnded:(NSSet*)t withEvent:(UIEvent*)e { [self updateIOWithTouchEvent:e]; }
-- (void)touchesCancelled:(NSSet*)t withEvent:(UIEvent*)e { [self updateIOWithTouchEvent:e]; }
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event { [self updateIOWithTouchEvent:event]; }
+- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event { [self updateIOWithTouchEvent:event]; }
+- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event { [self updateIOWithTouchEvent:event]; }
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event { [self updateIOWithTouchEvent:event]; }
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.mtkView.device          = self.device;
+    self.mtkView.delegate        = self;
+    self.mtkView.clearColor      = MTLClearColorMake(0, 0, 0, 0);
+    self.mtkView.backgroundColor = [UIColor clearColor];
+    self.mtkView.clipsToBounds   = YES;
+    
+    self.panelWidth  = 460;
+    self.panelHeight = 310;
+    self.currentTab = MenuTabESP;
+    self.tabButtons = [NSMutableArray array];
+    self.checkboxStates = [NSMutableDictionary dictionary];
+    
+    [self setupFloatingPanel];
+    [self setupSidebar];
+    [self setupHeaderBar];
+    [self setupContentArea];
+    
+    [self loadTabContent:self.currentTab];
+    [self updateSidebarForTab:self.currentTab];
+}
+
+#pragma mark - UIKit Setup
+
+- (void)setupFloatingPanel {
+    self.floatingPanel = [[UIView alloc] initWithFrame:CGRectMake(30, 40, self.panelWidth, self.panelHeight)];
+    self.floatingPanel.backgroundColor = [self backgroundColor];
+    self.floatingPanel.clipsToBounds = YES;
+    self.floatingPanel.layer.masksToBounds = NO;
+    self.floatingPanel.layer.borderWidth = 1.0;
+    self.floatingPanel.layer.borderColor = [UIColor colorWithRed:0.22 green:0.32 blue:0.5 alpha:0.6].CGColor;
+    
+    self.floatingPanel.alpha = 1.0f;
+    self.floatingPanel.transform = CGAffineTransformMakeScale(1.0f, 1.0f);
+
+    [self.view addSubview:self.floatingPanel];
+
+    UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleDrag:)];
+    [self.floatingPanel addGestureRecognizer:pan];
+}
+
+- (void)handleDrag:(UIPanGestureRecognizer *)g {
+    UIView *v = g.view;
+    CGPoint t = [g translationInView:v.superview];
+    v.center = CGPointMake(v.center.x + t.x, v.center.y + t.y);
+    [g setTranslation:CGPointZero inView:v.superview];
+}
+
+- (void)setupSidebar {
+    self.sidebarBg = [[UIView alloc] initWithFrame:CGRectMake(0, 40, kSidebarWidth, self.panelHeight - 40)];
+    self.sidebarBg.backgroundColor = [self sidebarBackgroundColor];
+    [self.floatingPanel addSubview:self.sidebarBg];
+
+    UIView *sep = [[UIView alloc] initWithFrame:CGRectMake(kSidebarWidth - 0.5, 0, 0.5, self.panelHeight - 40)];
+    sep.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.08];
+    [self.sidebarBg addSubview:sep];
+
+    NSArray *titles = @[@"Info", @"ESP", @"AimBot", @"Skin", @"Extra"];
+    NSArray *icons  = @[@"info.circle", @"scope", @"target", @"person.crop.rectangle", @"square.grid.2x2"];
+    NSInteger count = titles.count;
+
+    self.sidebarView = [[UIView alloc] initWithFrame:CGRectMake(0, 8, kSidebarWidth, self.panelHeight - 48)];
+    [self.sidebarBg addSubview:self.sidebarView];
+
+    for (int i = 0; i < (int)count; i++) {
+        CGFloat btnY = i * (kTabItemHeight + kTabSpacing);
+        UIButton *btn = [[UIButton alloc] initWithFrame:CGRectMake(6, btnY, kSidebarWidth - 12, kTabItemHeight)];
+        btn.backgroundColor = [self sidebarButtonColor:(i == self.currentTab)];
+        btn.layer.cornerRadius = 8;
+        btn.tag = i;
+
+        UIImageView *iv = [[UIImageView alloc] initWithFrame:CGRectMake(12, 8, 18, 18)];
+        iv.image = [[UIImage systemImageNamed:icons[i]] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightMedium]];
+        iv.tintColor = (i == self.currentTab) ? [UIColor whiteColor] : [UIColor colorWithWhite:0.6 alpha:1.0];
+        iv.contentMode = UIViewContentModeScaleAspectFit;
+        iv.tag = 100;
+        [btn addSubview:iv];
+
+        UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(10, 26, kSidebarWidth - 20, 16)];
+        lbl.text = titles[i];
+        lbl.font = [UIFont systemFontOfSize:11 weight:UIFontWeightMedium];
+        lbl.textColor = (i == self.currentTab) ? [UIColor whiteColor] : [UIColor colorWithWhite:0.6 alpha:1.0];
+        lbl.textAlignment = NSTextAlignmentCenter;
+        lbl.tag = 101;
+        [btn addSubview:lbl];
+
+        [btn addTarget:self action:@selector(tabButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+        [self.sidebarView addSubview:btn];
+        [self.tabButtons addObject:btn];
+    }
+}
+
+- (void)setupHeaderBar {
+    CGFloat hdrH = 40.0f;
+    UIView *headerBar = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.panelWidth, hdrH)];
+    headerBar.backgroundColor = [UIColor colorWithRed:0.12 green:0.24 blue:0.44 alpha:1.0];
+    [self.floatingPanel addSubview:headerBar];
+
+    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(12, 0, self.panelWidth - 60, hdrH)];
+    titleLabel.text = @"VN TOOL IPA VIP";
+    titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightBold];
+    titleLabel.textColor = [UIColor whiteColor];
+    [headerBar addSubview:titleLabel];
+
+    CGFloat closeBtnSize = 24.0f;
+    self.closeButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    self.closeButton.frame = CGRectMake(self.panelWidth - 32, (hdrH - closeBtnSize)/2.0f, closeBtnSize, closeBtnSize];
+    [self.closeButton setImage:[[UIImage systemImageNamed:@"xmark"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
+    self.closeButton.tintColor = [UIColor whiteColor];
+    [self.closeButton addTarget:self action:@selector(animateClose) forControlEvents:UIControlEventTouchUpInside];
+    [headerBar addSubview:self.closeButton];
+}
+
+- (void)setupContentArea {
+    CGFloat hdrH = 40.0f;
+    CGFloat h = self.panelHeight - hdrH;
+    CGFloat w = self.panelWidth - kSidebarWidth;
+
+    self.contentScrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(kSidebarWidth, hdrH, w, h)];
+    self.contentScrollView.showsVerticalScrollIndicator = YES;
+    self.contentScrollView.alwaysBounceVertical = YES;
+    [self.floatingPanel addSubview:self.contentScrollView];
+
+    self.contentContainer = [[UIView alloc] initWithFrame:CGRectMake(0, 0, w, h)];
+    [self.contentScrollView addSubview:self.contentContainer];
+}
+
+#pragma mark - Tab Logic
+
+- (void)tabButtonTapped:(UIButton *)sender {
+    if (sender.tag == self.currentTab) return;
+    self.currentTab = (MenuTab)sender.tag;
+    
+    [self updateSidebarForTab:self.currentTab];
+    [self loadTabContent:self.currentTab];
+}
+
+- (void)updateSidebarForTab:(MenuTab)tab {
+    for (UIButton *btn in self.tabButtons) {
+        UIImageView *iv = [btn viewWithTag:100];
+        UILabel *lbl = [btn viewWithTag:101];
+        BOOL sel = (btn.tag == tab);
+        iv.tintColor = sel ? [UIColor whiteColor] : [UIColor colorWithWhite:0.6 alpha:1.0];
+        lbl.textColor = sel ? [UIColor whiteColor] : [UIColor colorWithWhite:0.6 alpha:1.0];
+        btn.backgroundColor = [self sidebarButtonColor:sel];
+    }
+}
+
+- (void)loadTabContent:(MenuTab)tab {
+    for (UIView *v in self.contentContainer.subviews) [v removeFromSuperview];
+    
+    CGFloat w = self.contentScrollView.frame.size.width;
+    CGFloat y = 14;
+    
+    switch (tab) {
+        case MenuTabInfo:
+            y = [self addInfoContent:y width:w];
+            break;
+        case MenuTabESP:
+            y = [self addESPContent:y width:w];
+            break;
+        case MenuTabAimbot:
+            y = [self addPlaceholderContent:@"AimBot Options" atY:y width:w];
+            break;
+        case MenuTabSkin:
+            y = [self addPlaceholderContent:@"Skin Options" atY:y width:w];
+            break;
+        case MenuTabExtra:
+            y = [self addPlaceholderContent:@"Extra Options" atY:y width:w];
+            break;
+    }
+    
+    self.contentContainer.frame = CGRectMake(0, 0, w, y + 20);
+    self.contentScrollView.contentSize = self.contentContainer.bounds.size;
+}
+
+#pragma mark - Content Builders
+
+- (CGFloat)addESPContent:(CGFloat)y width:(CGFloat)w {
+    NSArray *leftColumn = @[@"Enable Cheats", @"Line", @"Name", @"3D Circle", @"Count"];
+    NSArray *rightColumn = @[@"Box", @"Skeleton", @"Outline"];
+    
+    CGFloat colWidth = (w - 30) / 2.0;
+    CGFloat leftX = 12;
+    CGFloat rightX = leftX + colWidth + 10;
+    
+    CGFloat currentY = y;
+    NSInteger maxRows = MAX(leftColumn.count, rightColumn.count);
+    
+    for (int i = 0; i < maxRows; i++) {
+        CGFloat rowH = 32;
+        if (i < leftColumn.count) {
+            [self addCheckboxItem:leftColumn[i] atFrame:CGRectMake(leftX, currentY, colWidth, rowH)];
+        }
+        if (i < rightColumn.count) {
+            [self addCheckboxItem:rightColumn[i] atFrame:CGRectMake(rightX, currentY, colWidth, rowH)];
+        }
+        currentY += rowH + 8;
+    }
+    return currentY;
+}
+
+- (CGFloat)addInfoContent:(CGFloat)y width:(CGFloat)w {
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(14, y, w - 28, 60)];
+    lbl.text = @"Welcome to VN TOOL IPA VIP.\nSelect a category from the sidebar to configure options.";
+    lbl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
+    lbl.textColor = [self textColor];
+    lbl.numberOfLines = 0;
+    [self.contentContainer addSubview:lbl];
+    return y + 70;
+}
+
+- (CGFloat)addPlaceholderContent:(NSString *)text atY:(CGFloat)y width:(CGFloat)w {
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(14, y, w - 28, 40)];
+    lbl.text = text;
+    lbl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
+    lbl.textColor = [self secondaryTextColor];
+    [self.contentContainer addSubview:lbl];
+    return y + 50;
+}
+
+- (void)addCheckboxItem:(NSString *)title atFrame:(CGRect)frame {
+    UIView *container = [[UIView alloc] initWithFrame:frame];
+    
+    BOOL isOn = [self.checkboxStates[title] boolValue];
+    
+    UIButton *boxBtn = [[UIButton alloc] initWithFrame:CGRectMake(0, (frame.size.height - 22)/2.0, 22, 22)];
+    boxBtn.backgroundColor = isOn ? [UIColor colorWithRed:0.18 green:0.42 blue:0.75 alpha:1.0] : [UIColor colorWithRed:0.15 green:0.16 blue:0.22 alpha:1.0];
+    boxBtn.layer.cornerRadius = 6;
+    boxBtn.layer.borderWidth = 1.0;
+    boxBtn.layer.borderColor = [UIColor colorWithRed:0.25 green:0.35 blue:0.55 alpha:1.0].CGColor;
+    
+    if (isOn) {
+        [boxBtn setImage:[[UIImage systemImageNamed:@"checkmark"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
+        boxBtn.tintColor = [UIColor whiteColor];
+    }
+    
+    boxBtn.tag = 999;
+    
+    UILabel *titleLbl = [[UILabel alloc] initWithFrame:CGRectMake(30, 0, frame.size.width - 30, frame.size.height)];
+    titleLbl.text = title;
+    titleLbl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightRegular];
+    titleLbl.textColor = [self textColor];
+    
+    UIButton *hitBox = [[UIButton alloc] initWithFrame:container.bounds];
+    hitBox.accessibilityLabel = title;
+    [hitBox addTarget:self action:@selector(checkboxTapped:) forControlEvents:UIControlEventTouchUpInside];
+    
+    [container addSubview:boxBtn];
+    [container addSubview:titleLbl];
+    [container addSubview:hitBox];
+    
+    [self.contentContainer addSubview:container];
+}
+
+- (void)checkboxTapped:(UIButton *)sender {
+    UIView *container = sender.superview;
+    UILabel *titleLbl = nil;
+    UIButton *boxBtn = nil;
+    
+    for (UIView *sub in container.subviews) {
+        if ([sub isKindOfClass:[UILabel class]]) titleLbl = (UILabel *)sub;
+        if ([sub isKindOfClass:[UIButton class]] && sub.tag == 999) boxBtn = (UIButton *)sub;
+    }
+    
+    if (titleLbl) {
+        NSString *key = titleLbl.text;
+        BOOL current = [self.checkboxStates[key] boolValue];
+        BOOL newState = !current;
+        self.checkboxStates[key] = @(newState);
+        
+        boxBtn.backgroundColor = newState ? [UIColor colorWithRed:0.18 green:0.42 blue:0.75 alpha:1.0] : [UIColor colorWithRed:0.15 green:0.16 blue:0.22 alpha:1.0];
+        if (newState) {
+            [boxBtn setImage:[[UIImage systemImageNamed:@"checkmark"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
+            boxBtn.tintColor = [UIColor whiteColor];
+        } else {
+            [boxBtn setImage:nil forState:UIControlStateNormal];
+        }
+    }
+}
+
+#pragma mark - Actions
+
+- (void)animateClose {
+    MenDeal = false;
+}
 
 #pragma mark - Render Loop
 
 - (void)drawInMTKView:(MTKView*)view {
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2(view.bounds.size.width, view.bounds.size.height);
-    CGFloat scale = view.window.screen.nativeScale ?: UIScreen.mainScreen.nativeScale;
-    io.DisplayFramebufferScale = ImVec2(scale, scale);
-    io.DeltaTime = 1 / float(view.preferredFramesPerSecond ?: 60);
-    
-    id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
-    [self.view setUserInteractionEnabled:MenDeal];
+    io.DisplaySize.x = view.bounds.size.width;
+    io.DisplaySize.y = view.bounds.size.height;
+    CGFloat fbScale  = view.window.screen.nativeScale ?: UIScreen.mainScreen.nativeScale;
+    io.DisplayFramebufferScale = ImVec2(fbScale, fbScale);
+    io.DeltaTime = 1.0f / float(view.preferredFramesPerSecond ?: 60);
 
-    MTLRenderPassDescriptor* desc = view.currentRenderPassDescriptor;
-    if (desc != nil) {
-        id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:desc];
-        ImGui_ImplMetal_NewFrame(desc);
+    static BOOL lastMenDeal = YES;
+    if ((BOOL)MenDeal != lastMenDeal) {
+        lastMenDeal = (BOOL)MenDeal;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.floatingPanel.hidden        = !MenDeal;
+            self.view.userInteractionEnabled =  MenDeal;
+        });
+    }
+
+    id<MTLCommandBuffer> cmdBuf = [self.commandQueue commandBuffer];
+    MTLRenderPassDescriptor* rpd = view.currentRenderPassDescriptor;
+
+    if (rpd != nil) {
+        id<MTLRenderCommandEncoder> enc = [cmdBuf renderCommandEncoderWithDescriptor:rpd];
+        [enc pushDebugGroup:@"ImGui"];
+
+        ImGui_ImplMetal_NewFrame(rpd);
         ImGui::NewFrame();
 
-        if (MenDeal) {
-            static int activeTab = 0;
-            static float bgColor[4] = {0.06f, 0.06f, 0.08f, 0.94f};
-            static float accentColor[4] = {0.00f, 0.45f, 0.90f, 1.00f};
+        ImGui::GetBackgroundDrawList();
 
-            ImGuiStyle& style = ImGui::GetStyle();
-            style.Colors[ImGuiCol_WindowBg] = ImVec4(bgColor[0], bgColor[1], bgColor[2], bgColor[3]);
-            style.Colors[ImGuiCol_ChildBg] = ImVec4(bgColor[0] + 0.03f, bgColor[1] + 0.03f, bgColor[2] + 0.04f, 1.00f);
-            style.Colors[ImGuiCol_Header] = ImVec4(accentColor[0], accentColor[1], accentColor[2], 0.4f);
-            style.Colors[ImGuiCol_HeaderHovered] = ImVec4(accentColor[0], accentColor[1], accentColor[2], 0.6f);
-            style.Colors[ImGuiCol_HeaderActive] = ImVec4(accentColor[0], accentColor[1], accentColor[2], 0.9f);
-            style.Colors[ImGuiCol_Button] = ImVec4(accentColor[0], accentColor[1], accentColor[2], 0.3f);
-            style.Colors[ImGuiCol_ButtonHovered] = ImVec4(accentColor[0], accentColor[1], accentColor[2], 0.6f);
-            style.Colors[ImGuiCol_ButtonActive] = ImVec4(accentColor[0], accentColor[1], accentColor[2], 1.0f);
-            style.Colors[ImGuiCol_CheckMark] = ImVec4(accentColor[0], accentColor[1], accentColor[2], 1.0f);
-            style.Colors[ImGuiCol_SliderGrab] = ImVec4(accentColor[0], accentColor[1], accentColor[2], 0.8f);
-
-            ImGui::SetNextWindowSize(ImVec2(560, 360), ImGuiCond_FirstUseEver); 
-            ImGui::Begin(menuTitle, &MenDeal, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
-
-            float menuWidth = ImGui::GetWindowWidth();
-            float menuHeight = ImGui::GetWindowHeight();
-
-            // --- PANEL LATERAL IZQUIERDO DE ICONOS ---
-            ImGui::BeginChild("Sidebar", ImVec2(75, menuHeight - 40), true);
-            {
-                if (ImGui::Selectable("ℹ️\nInfo", activeTab == 0, 0, ImVec2(60, 50))) { activeTab = 0; }
-                if (ImGui::Selectable("🎯\nESP", activeTab == 1, 0, ImVec2(60, 50))) { activeTab = 1; }
-                if (ImGui::Selectable("⚡\nAimBot", activeTab == 2, 0, ImVec2(60, 50))) { activeTab = 2; }
-                if (ImGui::Selectable("👕\nSkin", activeTab == 3, 0, ImVec2(60, 50))) { activeTab = 3; }
-                if (ImGui::Selectable("⚙️\nExtra", activeTab == 4, 0, ImVec2(60, 50))) { activeTab = 4; }
-            }
-            ImGui::EndChild();
-
-            ImGui::SameLine();
-
-            // --- PANEL DE CONTENIDO DERECHO ---
-            ImGui::BeginChild("Content", ImVec2(menuWidth - 100, menuHeight - 40), false);
-            {
-                if (activeTab == 0) {
-                    ImGui::TextColored(ImVec4(0,1,1,1), "RENAME MENU");
-                    if (ImGui::InputText("##rename", menuTitle, sizeof(menuTitle), ImGuiInputTextFlags_EnterReturnsTrue)) {
-                        if (strlen(menuTitle) == 0) strcpy(menuTitle, " ");
-                    }
-                    if (ImGui::IsItemClicked()) {
-                        self.invisibleTextField.text = [NSString stringWithUTF8String:menuTitle];
-                        [self.invisibleTextField becomeFirstResponder];
-                    }
-                    if (ImGui::Button("Close Keyboard")) [self.view endEditing:YES];
-                    
-                    ImGui::Spacing();
-                    ImGui::Separator();
-                    ImGui::Spacing();
-                    
-                    ImGui::Text("Personalizar Color del Panel:");
-                    ImGui::ColorEdit4("Fondo Panel", bgColor);
-                    ImGui::ColorEdit4("Color Acento", accentColor);
-
-                    ImGui::Separator();
-                    ImGui::TextDisabled("@minhiosne");
-                }
-                else if (activeTab == 1) {
-                    ImGui::Checkbox("Enable Cheats", &Vars.Enable);
-                    if (ImGui::BeginTable("split", 3)) {
-                        ImGui::TableNextColumn(); ImGui::Checkbox("Line", &Vars.lines);
-                        ImGui::TableNextColumn(); ImGui::Checkbox("Box", &Vars.Box);
-                        ImGui::TableNextColumn(); ImGui::Checkbox("Health", &Vars.Health);
-                        ImGui::TableNextColumn(); ImGui::Checkbox("Name", &Vars.Name);
-                        ImGui::TableNextColumn(); ImGui::Checkbox("Skeleton", &Vars.skeleton);
-                        ImGui::TableNextColumn(); ImGui::Checkbox("Distance", &Vars.Distance);
-                        ImGui::TableNextColumn(); ImGui::Checkbox("3D Circle", &Vars.circlepos);
-                        ImGui::TableNextColumn(); ImGui::Checkbox("Outline", &Vars.Outline);
-                        ImGui::TableNextColumn(); ImGui::Checkbox("OOF", &Vars.OOF);
-                        ImGui::TableNextColumn(); ImGui::Checkbox("Count", &Vars.enemycount);
-                        ImGui::EndTable();
-                    }
-                }
-                else if (activeTab == 2) {
-                    ImGui::Checkbox("Enable Aimbot", &Vars.Aimbot);
-                    ImGui::Checkbox("Visible", &Vars.VisibleCheck);
-                    ImGui::Checkbox("Knocked", &Vars.IgnoreKnocked); 
-                    ImGui::Combo("##1", &Vars.AimWhen, Vars.dir, 4);
-                    ImGui::Combo("##2", &Vars.AimHitbox, Vars.aimHitboxes, 3);
-                    ImGui::Combo("## mode", &Vars.AimMode, Vars.aimModes, 3);
-                    ImGui::Checkbox("ResetGuest", &ResetGuest);
-                    ImGui::Checkbox("Teleport to Mark", &Vars.TeleportMark1);
-                    ImGui::Checkbox("Tele 10m", &Vars.Tele10M);
-                    ImGui::Checkbox("Keo Dich", &Vars.AiPlayer2);
-                    ImGui::Checkbox("Pull player", &Vars.PullPlayer);
-                    ImGui::Checkbox("Auto Chay", &Vars.FlyGravity);
-                    if (Vars.FlyGravity) {
-                        ImGui::Indent();
-                        ImGui::SliderFloat("Toc do chay", &Vars.FlyGravitySpeed, 0.0f, 100.0f, "%.1f");
-                        ImGui::SliderFloat("Do nhay cao", &Vars.FlyUpForce, 0.0f, 30.0f, "%.1f");
-                        ImGui::Unindent();
-                    }
-                    if (ImGui::Checkbox("Sieu Antiban VIP", &antiban_thanhprd)) {
-                        if (antiban_thanhprd) { ApplyAllBypassHooks(); }
-                    }                        
-                    if (Vars.AimMode == 2) {
-                        ImGui::SliderFloat("AimFov", &Vars.AimFov, 0.0f, 360.0f, "Fov %.0f");
-                    }
-                }
-                else if (activeTab == 3) {
-                    ImGui::TextColored(ImVec4(1, 0, 0, 1), "mod skin igg fifai");
-                    ImGui::Separator();
-                    if (ImGui::Checkbox("cam co", &s_camco)) { modSkin(new JRMemoryEngine(mach_task_self()), s_camco, 909000001, 909000034); }
-                    if (ImGui::Checkbox("Mp40 Mang Xa ", &s_mp40_v7)) { modSkin(new JRMemoryEngine(mach_task_self()), s_mp40_v7, 909000001, 909000068); }
-                    if (ImGui::Checkbox("Mp40 Lv8 ", &s_mp40_v8)) { modSkin(new JRMemoryEngine(mach_task_self()), s_mp40_v8, 909000001, 909040010); }
-                    if (ImGui::Checkbox("M1014 (V1)", &s_m1014_v8_1)) { modSkin(new JRMemoryEngine(mach_task_self()), s_m1014_v8_1, 909000001, 909000085); }
-                    if (ImGui::Checkbox("M1014 (V2)", &s_m1014_v8_2)) { modSkin(new JRMemoryEngine(mach_task_self()), s_m1014_v8_2, 909000001, 909039011); }
-                    if (ImGui::Checkbox("Ump Lv7", &s_ump_v7)) { modSkin(new JRMemoryEngine(mach_task_self()), s_ump_v7, 909000001, 909000098); }
-                    if (ImGui::Checkbox("Ak Lv7", &s_ak_v7)) { modSkin(new JRMemoryEngine(mach_task_self()), s_ak_v7, 909000001, 909000063); }
-                    if (ImGui::Checkbox("An94 Lv7", &s_an94_v7)) { modSkin(new JRMemoryEngine(mach_task_self()), s_an94_v7, 909000001, 909035012); }
-                    if (ImGui::Checkbox("Thomson Lv7", &s_thomson_v7)) { modSkin(new JRMemoryEngine(mach_task_self()), s_thomson_v7, 909000001, 909038010); }
-                    ImGui::Separator();
-                    if (ImGui::Button("RESET ALL SKIN")) { }
-                }
-                else if (activeTab == 4) {
-                    ImGui::Checkbox("SilentAim", &SilentAim);
-                    ImGui::Checkbox("CheckIsVisible", &CheckWall1);
-                    ImGui::Checkbox("xoay xoay", &spin360); 
-                    if (spin360) {
-                        ImGui::Indent(); 
-                        ImGui::SliderFloat("speed xoay", &SpinSpeed, 0.0f, 30000.0f, "%.0f");
-                        ImGui::Unindent();
-                    }                                     
-                    ImGui::Checkbox("No Reload", &Vars.noreload);
-                    ImGui::Checkbox("Infinite Ammo", &Vars.vohandan);
-                    ImGui::Checkbox("UpPlayer", &Vars.UpPlayerOne);
-                    ImGui::Checkbox("Brutal & FastFire", &Vars.fastfire);
-                    ImGui::Checkbox("Remove brutal & FastFire", &Vars.xoaspeed);
-                    ImGui::Checkbox("aimkill", &AutoFire);
-                    if (ImGui::Checkbox("Fly Altura", &fly_altura)) {
-                        FlyController *fly = [[FlyController alloc] init];
-                        [fly flyAlturaSwitchChanged:fly_altura];
-                    }       
-                    if (ImGui::Checkbox("Sung nhanhh ", &fastShotEnabled)) {
-                        setFastShot(new JRMemoryEngine(mach_task_self()), fastShotEnabled);
-                    } 
-                    ImGui::Checkbox("fly cao", &Vars.flyaltura);
-                }
-            }
-            ImGui::EndChild();
-
-            ImGui::End();
-        }
-
-        // --- CÁC HÀM RUNTIME ---
-        get_players();
-        draw_watermark();
-        aimbot();
-        UpOneEnemy();
-        ProcessFlyGravity(); 
-        TeleportMarkVoid(); 
-        Tele10M();
-        AiPlayer2();
-        PullPlayer();
-
-        if (game_sdk) game_sdk->init();
-
-        // --- RENDER ---
         ImGui::Render();
-        ImGui_ImplMetal_RenderDrawData(ImGui::GetDrawData(), commandBuffer, renderEncoder);
-        
-        [renderEncoder endEncoding];
-        [commandBuffer presentDrawable:view.currentDrawable];
+        ImDrawData* dd = ImGui::GetDrawData();
+        ImGui_ImplMetal_RenderDrawData(dd, cmdBuf, enc);
+
+        [enc popDebugGroup];
+        [enc endEncoding];
+        [cmdBuf presentDrawable:view.currentDrawable];
     }
-    [commandBuffer commit];
+    [cmdBuf commit];
 }
 
-- (void)mtkView:(MTKView *)view drawableSizeWillChange:(CGSize)size {}
-+ (void)showChange:(BOOL)open { MenDeal = open; }
+- (void)mtkView:(MTKView*)view drawableSizeWillChange:(CGSize)size {}
 
 @end
