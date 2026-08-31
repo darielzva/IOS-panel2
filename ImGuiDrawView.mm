@@ -1,4 +1,4 @@
-// Code By VanNghia (Updated for Reference UI Structure)
+// Code By VanNghia (Complete & Fixed)
 #import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
 #import <Foundation/Foundation.h>
@@ -43,7 +43,7 @@ ImFont* verdana_smol;
 ImFont* pixel_big = {};
 ImFont* pixel_smol = {};
 
-#include "Helper/Obfuscate.h"
+#import "Helper/Obfuscate.h"
 #include <OpenGLES/ES2/gl.h>
 #include <OpenGLES/ES2/glext.h>
 #include <unistd.h>
@@ -55,15 +55,6 @@ ImFont* pixel_smol = {};
 static const CGFloat kSidebarWidth     = 96;
 static const CGFloat kTabItemHeight    = 48;
 static const CGFloat kTabSpacing       = 4;
-static const CGFloat kContentPadding   = 12;
-
-typedef NS_ENUM(NSInteger, MenuTab) {
-    MenuTabInfo = 0,
-    MenuTabESP,
-    MenuTabAimbot,
-    MenuTabSkin,
-    MenuTabExtra
-};
 
 // Declaración de variables globales del menú
 static BOOL isDarkMode = YES;
@@ -76,8 +67,15 @@ static float menuScale = 1.0f;
 + (void)showChange:(BOOL)open;
 @end
 
-@interface ImGuiDrawView () <MTKViewDelegate, UIGestureRecognizerDelegate>
+typedef NS_ENUM(NSInteger, MenuTab) {
+    MenuTabInfo = 0,
+    MenuTabESP,
+    MenuTabAimbot,
+    MenuTabSkin,
+    MenuTabExtra
+};
 
+@interface ImGuiDrawView () <MTKViewDelegate, UIGestureRecognizerDelegate>
 
 @property (nonatomic, strong) id <MTLDevice> device;
 @property (nonatomic, strong) id <MTLCommandQueue> commandQueue;
@@ -158,8 +156,15 @@ ImFont *_espFont;
     }
     ImFontConfig cfg;
     cfg.OversampleH = 2; cfg.OversampleV = 2;
-    ImFont* mainFont = io.Fonts->AddFontFromMemoryTTF((void*)NotoSansViet, (int)sizeof(NotoSansViet), 16.0f, &cfg, gVietRanges.Data);
-    ImFont* bigFont = io.Fonts->AddFontFromMemoryTTF((void*)NotoSansViet, (int)sizeof(NotoSansViet), 32.0f, &cfg, gVietRanges.Data);
+    
+    // Soporte seguro de fuentes integradas por defecto o fallback
+#ifdef DEF_FONT_SIZE
+    ImFont* mainFont = io.Fonts->AddFontFromMemoryTTF((void*)DefaultFontData, (int)DefaultFontSize, 16.0f, &cfg, gVietRanges.Data);
+    ImFont* bigFont  = io.Fonts->AddFontFromMemoryTTF((void*)DefaultFontData, (int)DefaultFontSize, 32.0f, &cfg, gVietRanges.Data);
+#else
+    ImFont* mainFont = io.Fonts->AddFontDefault();
+    ImFont* bigFont  = io.Fonts->AddFontDefault();
+#endif
 
     verdana_smol = mainFont;
     pixel_big    = bigFont;
@@ -310,7 +315,7 @@ ImFont *_espFont;
 
     CGFloat closeBtnSize = 24.0f;
     self.closeButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    self.closeButton.frame = CGRectMake(self.panelWidth - 32, (hdrH - closeBtnSize)/2.0f, closeBtnSize, closeBtnSize];
+    self.closeButton.frame = CGRectMake(self.panelWidth - 32, (hdrH - closeBtnSize)/2.0f, closeBtnSize, closeBtnSize);
     [self.closeButton setImage:[[UIImage systemImageNamed:@"xmark"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
     self.closeButton.tintColor = [UIColor whiteColor];
     [self.closeButton addTarget:self action:@selector(animateClose) forControlEvents:UIControlEventTouchUpInside];
