@@ -437,12 +437,13 @@ ImFont *_espFont;
 - (CGFloat)addNoticeBanner:(NSString *)text atY:(CGFloat)y width:(CGFloat)w {
     UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y, w - 24, 28)];
     lbl.text = text;
-    lbl.font = [UIColor fontWithName:@"Helvetica" size:10] ? [UIFont systemFontOfSize:10 weight:UIFontWeightMedium] : [UIFont systemFontOfSize:10];
+    lbl.font = [UIFont fontWithName:@"Helvetica" size:10] ?: [UIFont systemFontOfSize:10 weight:UIFontWeightMedium];
     lbl.textColor = [UIColor colorWithWhite:0.7 alpha:1.0];
     lbl.numberOfLines = 1;
     [self.contentContainer addSubview:lbl];
     return y + 32;
 }
+
 
 - (CGFloat)addPlaceholderContent:(NSString *)text atY:(CGFloat)y width:(CGFloat)w {
     UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(12, y + 20, w - 24, 40)];
