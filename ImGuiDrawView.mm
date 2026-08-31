@@ -521,7 +521,7 @@ ImFont *_espFont;
     
     CGFloat switchSize = 18.0f;
     UIButton *boxBtn = [[UIButton alloc] initWithFrame:CGRectMake(frame.size.width - switchSize - 10, (frame.size.height - switchSize)/2.0, switchSize, switchSize)];
-    boxBtn.backgroundColor = isOn ? [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0] : [UIColor colorWithRed:0.22 g:0.22 b:0.26 alpha:0.5];
+    boxBtn.backgroundColor = isOn ? [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0] : [UIColor colorWithRed:0.22 green:0.22 blue:0.26 alpha:0.5];
     boxBtn.layer.cornerRadius = 4.0;
     boxBtn.userInteractionEnabled = NO;
     
@@ -564,7 +564,7 @@ ImFont *_espFont;
         BOOL newState = !current;
         self.checkboxStates[key] = @(newState);
         
-        boxBtn.backgroundColor = newState ? [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0] : [UIColor colorWithRed:0.22 g:0.22 b:0.26 alpha:0.5];
+        boxBtn.backgroundColor = newState ? [UIColor colorWithRed:0.85 green:0.18 blue:0.22 alpha:1.0] : [UIColor colorWithRed:0.22 green:0.22 blue:0.26 alpha:0.5];
         if (newState) {
             [boxBtn setImage:[[UIImage systemImageNamed:@"checkmark"] imageByApplyingSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:9 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
             boxBtn.tintColor = [UIColor whiteColor];
